@@ -20,7 +20,7 @@ class ColorSine:
         blue = int((self.statics[2] + self.ampls[2] * math.cos(self.phases[2] + (self.blue * self.freqs[2] * math.pi / 180))) * 255)
         return red, green, blue
 
-    def increment(self):
-        self.red = (self.red + 1) % int(360 / self.freqs[0])
-        self.green = (self.green + 1) % int(360 / self.freqs[1])
-        self.blue = (self.blue + 1) % int(360 / self.freqs[2])
+    def increment(self, inc=1):
+        self.red = (self.red + inc) % int(360 / self.freqs[0])
+        self.green = (self.green + inc) % int(360 / self.freqs[1])
+        self.blue = (self.blue + inc) % int(360 / self.freqs[2])
