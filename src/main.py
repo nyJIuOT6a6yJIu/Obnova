@@ -1,3 +1,17 @@
+# TODO:
+#  ammo count, weapon drop, weapon pickup
+#  during first game: change tooltios,
+#                     revert graphics,
+#                     remove lasersight & shooting,
+#                     remove animal masks and reduce stats to original
+#  pacifist root - unlocks sralker teaser
+#  nuke animation with poroshenko
+#  and WASTED and 'pacan k uspehoo shol' on consequent plays
+#  add transparent tooltips
+#  add score and game timer
+#  add more features for kills
+#  add scaling if killrun
+
 import pygame
 from sys import exit
 from scripts.color_sine import ColorSine
@@ -35,6 +49,25 @@ def enemy_collision(player: pygame.Rect, enemy_list: list) -> bool:
             return False
     return True
 
+def enemy_shot(point, enemy_list: list):
+    shot = []
+    for i in enemy_list:
+        if i[0].collidepoint(point):
+            shot.append(i)
+    if shot:
+        return shot
+    else:
+        return None
+
+
+def aim_at_enemy(point, enemy_list: list):
+    for i in enemy_list:
+        if i[0].collidepoint(point):
+            return True
+    else:
+        return False
+
+
 def player_animation(player, surface, animation, index, speed):
     if player.bottom < 300:
         return animation[2], 0
@@ -45,6 +78,7 @@ def player_animation(player, surface, animation, index, speed):
         return animation[int(index)], index
     else:
         return animation[0], 0
+
 
 def player_movement(player, speed, jumps, m_jumps):
     gravity_acc = 1
@@ -129,13 +163,13 @@ player_speed = [0, 0]
 player_jumps = 2
 max_jumps = 1
 
-rooster_surf = pygame.transform.scale(pygame.image.load('graphics/Player/rooster.png').convert_alpha(), (90, 95))
-rooster_rect = rooster_surf.get_rect(center=player_rect.midtop)
+_rooster_surf = pygame.transform.scale(pygame.image.load('graphics/Player/rooster.png').convert_alpha(), (90, 95))
+rooster_rect = _rooster_surf.get_rect(center=player_rect.midtop)
 
-pygame.display.set_icon(rooster_surf)
+pygame.display.set_icon(_rooster_surf)
 
-gun_surf = pygame.transform.scale(pygame.image.load('graphics/GUN.png').convert_alpha(), (120, 60))
-gun_rect = gun_surf.get_rect(midleft=(player_rect.left, player_rect.midleft[1]+15))
+_gun_surf = pygame.transform.scale(pygame.image.load('graphics/GUN.png').convert_alpha(), (120, 60))
+gun_rect = _gun_surf.get_rect(midleft=(player_rect.left, player_rect.midleft[1]+15))
 
 after_image = []
 
@@ -165,6 +199,7 @@ fly_anim_timer = pygame.USEREVENT + 3
 pygame.time.set_timer(fly_anim_timer, 200)
 
 game_active = True
+fresh_start = True
 
 while True:
     for event in pygame.event.get():
@@ -207,6 +242,7 @@ while True:
             menu_music.stop()
             bg_music.play(loops=-1, fade_ms=400)
             start_time = pygame.time.get_ticks()
+            fresh_start = False
             game_active = True
 
     if not game_active:
@@ -214,22 +250,25 @@ while True:
 
         screen.blit(player_stand_surf, player_stand_rect)
 
-        score_line = f'You killed {score} zombie snail-dogs.'
+        score_line = f'You killed {score} enemies.'
         new_game_line = 'Press  Y to continue'
         if score == 0:
-            score_line = 'Press Y key to start'
-            new_game_line = ''
+            score_line = ''
+            new_game_line = 'Press Y key to start'
 
         final_score_surf = pixel_font.render(score_line, True, 'Red')
         final_score_rect = final_score_surf.get_rect(center=(400, 200))
         new_game_surf = pixel_font.render(new_game_line, True, 'Red')
-        new_game_rect = new_game_surf.get_rect(center=(400, 250))
+        new_game_rect = new_game_surf.get_rect(midleft=(400, 250))
         screen.blit(final_score_surf, final_score_rect)
         screen.blit(new_game_surf, new_game_rect)
         screen.blit(game_name_surf, (200, 40))
         colorChange.increment()
 
     else:
+        if fresh_start:
+            gun_surf = pygame.Surface((1, 1))
+            rooster_surf = pygame.Surface((1, 1))
         if pygame.key.get_pressed()[pygame.K_a]:
             player_speed[0] = -5
         elif pygame.key.get_pressed()[pygame.K_d]:
@@ -255,9 +294,9 @@ while True:
         gun_rect.midleft = (player_rect.left, player_rect.midleft[1] + 15)
         screen.blit(gun_surf, gun_rect)
 
-        # if snail_rect.collidepoint(pygame.mouse.get_pos()):
-        #     pygame.draw.line(screen, "Red", (gun_rect.midright[0]-30, gun_rect.midright[1]-3), pygame.mouse.get_pos(),
-        #                      width=2)
+        if not fresh_start and aim_at_enemy(pygame.mouse.get_pos(), enemy_rect_list):
+            pygame.draw.line(screen, "Red", (gun_rect.midright[0]-30, gun_rect.midright[1]-3), pygame.mouse.get_pos(),
+                             width=2)
 
         for index, i in enumerate(after_image):
             if i[0] > 0:
@@ -267,13 +306,19 @@ while True:
             else:
                 after_image.pop(index)
 
-        # game_active = enemy_collision(player_rect, enemy_rect_list)
+        game_active = enemy_collision(player_rect, enemy_rect_list)
 
         if not game_active:
             ds = random.choice([death_sound, death_sound_2])
             ds.play()
             colorChange.increment(50)
             bg_music.fadeout(1500)
+
+            rooster_surf = _rooster_surf
+            rooster_rect = _rooster_surf.get_rect(center=player_rect.midtop)
+
+            gun_surf = _gun_surf
+            gun_rect = _gun_surf.get_rect(midleft=(player_rect.left, player_rect.midleft[1] + 15))
             continue
 
         enemy_rect_list = enemy_update(enemy_list=enemy_rect_list)
