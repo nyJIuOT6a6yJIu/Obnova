@@ -21,6 +21,9 @@ class ColorSine:
         return red, green, blue
 
     def increment(self, inc=1):
-        self.red = (self.red + inc) % int(360 / self.freqs[0])
-        self.green = (self.green + inc) % int(360 / self.freqs[1])
-        self.blue = (self.blue + inc) % int(360 / self.freqs[2])
+        if self.freqs[0]:
+            self.red = (self.red + inc) % int(360 / self.freqs[0])
+        if self.freqs[1]:
+            self.green = (self.green + inc) % int(360 / self.freqs[1])
+        if self.freqs[2]:
+            self.blue = (self.blue + inc) % int(360 / self.freqs[2])
