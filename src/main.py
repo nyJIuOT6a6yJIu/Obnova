@@ -12,11 +12,116 @@
 #  add more features for kills
 #  add scaling if killrun
 
-import pygame
-from sys import exit
-from scripts.color_sine import ColorSine
 import math
 import random
+
+import pygame
+from sys import exit
+
+from scripts.color_sine import ColorSine
+
+class Player(pygame.sprite.Sprite):
+    def __init__(self):
+        super().__init__()
+
+        self.jumps = 1
+        self.max_jumps = 1
+        self.speed = [0, 0]
+        self.a_pressed = False
+        self.d_pressed = False  # Ну я ))))))
+
+        self.walk_anim = [pygame.image.load('graphics/Player/player_walk_1.png').convert_alpha(),
+                          pygame.image.load('graphics/Player/player_walk_2.png').convert_alpha(),
+                          pygame.image.load('graphics/Player/jump.png').convert_alpha()]
+        self.anim_index = 0
+
+        self.rooster_mask = pygame.transform.scale(pygame.image.load('graphics/Player/rooster.png').convert_alpha(), (90, 95))
+        self.rooster_rect = self.rooster_mask.get_rect()
+
+        self.gun_ak = pygame.transform.scale(pygame.image.load('graphics/GUN.png').convert_alpha(), (120, 60))
+        self.gun_ak_rect = self.gun_ak.get_rect()
+
+        self.image = self.walk_anim[self.anim_index]
+        self.rect = self.image.get_rect(midbottom=(80, 300))
+
+    def player_input(self, key_pressed, released=False):
+        if self.jumps and (key_pressed == pygame.K_SPACE or key_pressed == pygame.K_w) and not released:
+            self.speed[1] = -20
+            self.jumps -= 1
+        if key_pressed == pygame.K_a and not released:
+            self.a_pressed = True
+        elif key_pressed == pygame.K_a and released:
+            self.a_pressed = False
+        if key_pressed == pygame.K_d and not released:
+            self.d_pressed = True
+        if key_pressed == pygame.K_d and released:
+            self.d_pressed = False
+        if self.a_pressed or self.d_pressed:
+            self.speed[0] = 5*bool(self.d_pressed) - 5*bool(self.a_pressed)
+
+    def player_movement(self):
+        gravity_acc = 1
+        stiffness = 1
+
+        self.rect.centerx += self.speed[0]
+        self.rect.bottom += self.speed[1]
+        self.speed[1] += gravity_acc
+
+        if self.rect.bottom > 300:
+            self.rect.bottom = 300
+            self.speed[1] = 0
+            self.jumps = self.max_jumps
+        if self.rect.left < 0:
+            self.rect.left = 0
+        elif self.rect.right > 780:
+            self.rect.right = 780
+        if self.speed[0]:
+            if not (self.a_pressed or self.d_pressed):
+                self.speed[0] -= (abs(stiffness)) * (self.speed[0] / (abs(self.speed[0])))
+
+    def draw_attachments(self, mode=None):
+        """
+        mode = {'normal', 'no mask', 'no gun'}
+        :param mode:
+        :return:
+        """
+
+        if mode is None or 'normal' in mode:
+            self.rooster_rect.center = (self.rect.midtop[0] + 7, self.rect.midtop[1] + 23)
+            screen.blit(self.rooster_mask, self.rooster_rect)
+
+            self.gun_ak_rect.midleft = (self.rect.left, self.rect.midleft[1] + 15)
+            screen.blit(self.gun_ak, self.gun_ak_rect)
+
+            return
+
+        if 'no mask' in mode:
+            pass
+        else:
+            self.rooster_rect.center = (self.rect.midtop[0] + 7, self.rect.midtop[1] + 23)
+            screen.blit(self.rooster_mask, self.rooster_rect)
+        if 'no gun' in mode:
+            pass
+        else:
+            self.gun_ak_rect.midleft = (self.rect.left, self.rect.midleft[1] + 15)
+            screen.blit(self.gun_ak, self.gun_ak_rect)
+
+    def player_animate(self):
+        if self.rect.bottom < 300:
+            self.image = self.walk_anim[2]
+        elif abs(self.speed[0]):
+            self.anim_index += 0.15
+            if self.anim_index >= 2:
+                self.anim_index = 0
+            self.image = self.walk_anim[int(self.anim_index)]
+        else:
+            self.anim_index = 0
+            self.image = self.walk_anim[self.anim_index]
+
+    def update(self):
+        self.player_movement()
+        self.draw_attachments()
+        self.player_animate()
 
 
 def display_current_time():
@@ -68,40 +173,6 @@ def aim_at_enemy(point, enemy_list: list):
         return False
 
 
-def player_animation(player, surface, animation, index, speed):
-    if player.bottom < 300:
-        return animation[2], 0
-    elif abs(speed):
-        index += 0.15
-        if index >= 2:
-            index = 0
-        return animation[int(index)], index
-    else:
-        return animation[0], 0
-
-
-def player_movement(player, speed, jumps, m_jumps):
-    gravity_acc = 1
-    stiffness = 1
-
-    player.centerx += speed[0]
-    player.bottom += speed[1]
-    speed[1] += gravity_acc
-
-    if player.bottom > 300:
-        player.bottom = 300
-        speed[1] = 0
-        jumps = m_jumps
-    if player.left < 0:
-        player.left = 0
-    elif player.right > 780:
-        player.right = 780
-    if speed[0]:
-        speed[0] -= (abs(stiffness)) * (speed[0] / (abs(speed[0])))
-
-    return player, speed, jumps
-
-
 pygame.init()
 start_time = 0
 screen = pygame.display.set_mode((800, 400))
@@ -114,7 +185,9 @@ colorChange = ColorSine(phases= [math.pi*0.5, math.pi*0.7, 0],
                         statics=[0.5, 0.7, 0.7],
                         ampls = [0.5, 0.3, 0.3])
 
-
+player = pygame.sprite.GroupSingle()
+player_sprite = Player()
+player.add(player_sprite)
 
 game_name_surf = pixel_font.render('Hohline Cherkasy', True, 'Red')
 color_surf = pygame.Surface((800, 300))
@@ -123,8 +196,8 @@ sky_surf = pygame.image.load('graphics/Sky_miami.png').convert_alpha()
 ground_surf = pygame.image.load('graphics/ground.png').convert()
 
 score = 0
-# score_surf = pixel_font.render(f'Score: {score}', True, (64, 64, 64))
-# score_rect = score_surf.get_rect(center=(400, 50))
+
+
 
 snail_1_surf = pygame.image.load('graphics/snail/snail1.png').convert_alpha()
 snail_2_surf = pygame.image.load('graphics/snail/snail2.png').convert_alpha()
@@ -144,17 +217,6 @@ owl_surf = pygame.transform.scale(pygame.image.load('graphics/fly/owl.png').conv
 
 enemy_rect_list = []
 
-player_walk_1_surf = pygame.image.load('graphics/Player/player_walk_1.png').convert_alpha()
-player_walk_2_surf = pygame.image.load('graphics/Player/player_walk_2.png').convert_alpha()
-player_jump_surf = pygame.image.load('graphics/Player/jump.png').convert_alpha()
-player_walk_anim = [player_walk_1_surf, player_walk_2_surf, player_jump_surf]
-player_anim_index = 0
-
-
-player_surf = player_walk_1_surf
-
-player_rect = player_surf.get_rect(midbottom=(80, 300))
-
 player_stand_surf = pygame.transform.rotozoom(
     pygame.image.load('graphics/Player/player_stand.png').convert_alpha(), 0, 3)
 player_stand_rect = player_stand_surf.get_rect(center=(179, 200))
@@ -163,13 +225,7 @@ player_speed = [0, 0]
 player_jumps = 2
 max_jumps = 1
 
-_rooster_surf = pygame.transform.scale(pygame.image.load('graphics/Player/rooster.png').convert_alpha(), (90, 95))
-rooster_rect = _rooster_surf.get_rect(center=player_rect.midtop)
-
-pygame.display.set_icon(_rooster_surf)
-
-_gun_surf = pygame.transform.scale(pygame.image.load('graphics/GUN.png').convert_alpha(), (120, 60))
-gun_rect = _gun_surf.get_rect(midleft=(player_rect.left, player_rect.midleft[1]+15))
+# pygame.display.set_icon(_rooster_surf)  # TODO: add app icon
 
 after_image = []
 
@@ -208,9 +264,9 @@ while True:
             exit()
         if game_active:
             if event.type == pygame.KEYDOWN:
-                if player_jumps and (event.key == pygame.K_SPACE or event.key == pygame.K_w):
-                    player_speed[1] = -20
-                    player_jumps -= 1
+                player_sprite.player_input(event.key, False)
+            if event.type == pygame.KEYUP:
+                player_sprite.player_input(event.key, True)
 
             if event.type == enemy_spawn_timer:
                 if random.randint(1, 4) == 1:
@@ -232,7 +288,7 @@ while True:
                                     freqs=[1.1, 0.2, 1],
                                     statics=[0.5, 0.7, 0.7],
                                     ampls=[0.5, 0.3, 0.3])
-            player_rect.midbottom = (80, 300)
+            # player_rect.midbottom = (80, 300)
             player_speed = [0, 0]
             max_jumps = 1
             player_jumps = max_jumps
@@ -266,13 +322,10 @@ while True:
         colorChange.increment()
 
     else:
-        if fresh_start:
-            gun_surf = pygame.Surface((1, 1))
-            rooster_surf = pygame.Surface((1, 1))
-        if pygame.key.get_pressed()[pygame.K_a]:
-            player_speed[0] = -5
-        elif pygame.key.get_pressed()[pygame.K_d]:
-            player_speed[0] = 5
+        # if fresh_start:
+        #     gun_surf = pygame.Surface((1, 1))
+        #     rooster_surf = pygame.Surface((1, 1))
+
         screen.blit(ground_surf, (0, 300))
 
         color = colorChange.return_color()
@@ -285,28 +338,26 @@ while True:
         score_rect = score_surf.get_rect(center=(400, 50))
         screen.blit(score_surf, score_rect)
 
-        player_rect, player_speed, player_jumps = player_movement(player_rect, player_speed, player_jumps, max_jumps)
+        # player_rect, player_speed, player_jumps = player_movement(player_rect, player_speed, player_jumps, max_jumps)
 
-        player_surf, player_anim_index = player_animation(player_rect, player_surf, player_walk_anim, player_anim_index, player_speed[0])
-        screen.blit(player_surf, player_rect)
-        rooster_rect.center=(player_rect.midtop[0]+7, player_rect.midtop[1]+23)
-        screen.blit(rooster_surf, rooster_rect)
-        gun_rect.midleft = (player_rect.left, player_rect.midleft[1] + 15)
-        screen.blit(gun_surf, gun_rect)
+        # player_surf, player_anim_index = player_animation(player_rect, player_surf, player_walk_anim, player_anim_index, player_speed[0])
+        # screen.blit(player_surf, player_rect)
+        player.draw(screen)
+        player.update()
 
-        if not fresh_start and aim_at_enemy(pygame.mouse.get_pos(), enemy_rect_list):
-            pygame.draw.line(screen, "Red", (gun_rect.midright[0]-30, gun_rect.midright[1]-3), pygame.mouse.get_pos(),
-                             width=2)
+        # if not fresh_start and aim_at_enemy(pygame.mouse.get_pos(), enemy_rect_list):
+        #     pygame.draw.line(screen, "Red", (gun_rect.midright[0]-30, gun_rect.midright[1]-3), pygame.mouse.get_pos(),
+        #                      width=2)
 
-        for index, i in enumerate(after_image):
-            if i[0] > 0:
-                pygame.draw.line(screen, (255, 255, 100), (gun_rect.midright[0]-8, gun_rect.midright[1]-4), i[1],
-                             width = int(6 * math.sin(i[0]*math.pi/8)))
-                i[0] -= 1
-            else:
-                after_image.pop(index)
+        # for index, i in enumerate(after_image):
+        #     if i[0] > 0:
+        #         pygame.draw.line(screen, (255, 255, 100), (gun_rect.midright[0]-8, gun_rect.midright[1]-4), i[1],
+        #                      width = int(6 * math.sin(i[0]*math.pi/8)))
+        #         i[0] -= 1
+        #     else:
+        #         after_image.pop(index)
 
-        game_active = enemy_collision(player_rect, enemy_rect_list)
+        # game_active = enemy_collision(player_rect, enemy_rect_list)
 
         if not game_active:
             ds = random.choice([death_sound, death_sound_2])
@@ -314,11 +365,6 @@ while True:
             colorChange.increment(50)
             bg_music.fadeout(1500)
 
-            rooster_surf = _rooster_surf
-            rooster_rect = _rooster_surf.get_rect(center=player_rect.midtop)
-
-            gun_surf = _gun_surf
-            gun_rect = _gun_surf.get_rect(midleft=(player_rect.left, player_rect.midleft[1] + 15))
             continue
 
         enemy_rect_list = enemy_update(enemy_list=enemy_rect_list)
