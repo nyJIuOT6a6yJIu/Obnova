@@ -11,6 +11,7 @@ class Fly(pygame.sprite.Sprite):
         self.anim_index = 0
         self.image = self.anim_frames[self.anim_index]
         self.rect = self.image.get_rect()
+        self.center = [0.0, 0.0]
         self.speed = [0, 0]
 
     def set_speed(self, v_x=None, v_y=None):
@@ -20,13 +21,15 @@ class Fly(pygame.sprite.Sprite):
             self.speed[1] = v_y
 
     def _movement(self):
-        self.rect.centerx += self.speed[0]
-        self.rect.centery += self.speed[1]
+        if abs(self.rect.centerx - self.center[0]) > 2: # ???
+            self.center[0] = self.rect.centerx
+        self.center[0] += self.speed[0] * self.game.delta_time / 1000
+        self.rect.centerx = int(self.center[0])
         if self.rect.right < 0:
             self.kill()
 
     def _animate(self):
-        self.anim_index += 0.08
+        self.anim_index += 4.8 * self.game.delta_time / 1000
         if self.anim_index >= 2:
             self.anim_index = 0
         self.image = self.anim_frames[int(self.anim_index)]
@@ -49,6 +52,7 @@ class Snail(pygame.sprite.Sprite):
         self.anim_index = 0
         self.image = self.anim_frames[self.anim_index]
         self.rect = self.image.get_rect()
+        self.center = [0.0, 0.0]
         self.speed = [0, 0]
 
     def set_speed(self, v_x=None, v_y=None):
@@ -58,13 +62,15 @@ class Snail(pygame.sprite.Sprite):
             self.speed[1] = v_y
 
     def _movement(self):
-        self.rect.centerx += self.speed[0]
-        self.rect.centery += self.speed[1]
+        if abs(self.rect.centerx - self.center[0]) > 2:  # ???
+            self.center[0] = self.rect.centerx
+        self.center[0] += self.speed[0] * self.game.delta_time / 1000
+        self.rect.centerx = int(self.center[0])
         if self.rect.right < 0:
             self.kill()
 
     def _animate(self):
-        self.anim_index += 0.06
+        self.anim_index += 3.6 * self.game.delta_time / 1000
         if self.anim_index >= 2:
             self.anim_index = 0
         self.image = self.anim_frames[int(self.anim_index)]

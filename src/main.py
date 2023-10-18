@@ -12,6 +12,8 @@
 #  add more features for kills
 #  add scaling if killrun
 #  add oof deathsound
+#  add zebra mask and dodge ability after nuke ending
+#  introduce speed limit (so that game wont crush)
 
 import math
 import random
@@ -57,7 +59,8 @@ class Game(object):
         pygame.display.set_caption('Obnova v0.0.0.2')
         pygame.display.set_icon(self.rooster_mask)
 
-        self.start_time = 0
+        # self.start_time = 0
+
         self.clock = pygame.time.Clock()
         self.pixel_font = pygame.font.Font('font/Pixeltype.ttf', 50)
 
@@ -73,6 +76,8 @@ class Game(object):
         self.player_menu_rect = self.player_menu.get_rect(center=(179, 200))
 
         self.load_sounds()
+        self.current_track = None
+
         self.gun_sound.set_volume(1.1)
         self.death_sound.set_volume(1.3)
         self.death_sound_2.set_volume(1.3)
@@ -114,7 +119,17 @@ class Game(object):
         self.bg_music      = pygame.mixer.Sound('audio/miami.mp3')
         self.menu_music    = pygame.mixer.Sound('audio/menu.mp3')
 
-# TODO: add music handler
+# TODO: add music handler (maybe new class?)
+    def music_play(self, new_music):
+        if self.current_track:
+            self.current_track.stop()
+        self.current_track = new_music
+        self.current_track.play(loops=-1, fade_ms=400)
+
+    def music_stop(self):
+        if self.current_track:
+            self.current_track.stop()
+        self.current_track = None
 
     def set_up_game(self):
         self.player = pygame.sprite.GroupSingle()
@@ -139,6 +154,9 @@ class Game(object):
 
         self.after_image = []
 
+        self.delta_time = 0
+        self.last_time_frame = pygame.time.get_ticks()
+
         pygame.time.set_timer(self.enemy_spawn_timer, 1500)
 
         self.game_active = True
@@ -154,6 +172,9 @@ class Game(object):
 
     def game_loop(self):
         while True:
+            self.delta_time = (pygame.time.get_ticks() - self.last_time_frame)
+            self.last_time_frame = pygame.time.get_ticks()
+
             self.event_loop()
             if self.game_active:
                 self.runtime_frame()
@@ -189,7 +210,8 @@ class Game(object):
         self.screen.blit(self.ground_surf, (0, 300))
 
         self.sky_color_surf.fill(self.sky_color.return_color())
-        self.sky_color.increment()
+        inc = self.delta_time*60/1000
+        self.sky_color.increment(inc)
 
         self.screen.blit(self.sky_color_surf, (0, 0))
         self.screen.blit(self.sky_surf, (0, 0))
@@ -240,7 +262,9 @@ class Game(object):
         self.screen.blit(final_score_surf, final_score_rect)
         self.screen.blit(new_game_surf, new_game_rect)
         self.screen.blit(self.game_name_surf, (200, 40))
-        self.sky_color.increment()
+
+        inc = self.delta_time*60/1000
+        self.sky_color.increment(inc)
 
     def game_over(self):
         if not self.game_active:
@@ -249,21 +273,21 @@ class Game(object):
             self.sky_color.increment(50)
             self.bg_music.fadeout(1500)
 
-    def get_current_time(self):
-        current_time = (pygame.time.get_ticks() - self.start_time)//1000
-        return current_time
+    # def get_current_time(self):
+    #     current_time = (pygame.time.get_ticks() - self.start_time)//1000
+    #     return current_time
 
     def add_new_enemy(self, snail_relative_chance: int, fly_relative_chance: int):
         if random.randint(1, snail_relative_chance + fly_relative_chance) <= fly_relative_chance:
             a = Fly(self)
             a.rect.midbottom = (random.randint(810, 1010), 150)
-            a.set_speed(v_x=-1 * random.randint(5, 9))
+            a.set_speed(v_x=-1 * random.randint(300, 540))
             self.enemy_group.add(a)
             del a
         else:
             a = Snail(self)
             a.rect.midbottom = (random.randint(810, 1010), 300)
-            a.set_speed(v_x=-1 * random.randint(4, 8))
+            a.set_speed(v_x=-1 * random.randint(240, 480))
             self.enemy_group.add(a)
             del a
 
