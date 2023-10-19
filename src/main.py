@@ -12,6 +12,7 @@
 #  (?) add game timer
 #  - add zebra mask and dodge ability after nuke ending
 #  - introduce speed limit (so that game wont crush)
+#  - add custom font size
 
 import math
 import random
@@ -56,10 +57,11 @@ class Game(object):
         self.mouse.rect = pygame.Rect(0, 0, 2, 2)
 
         self.clock = pygame.time.Clock()
-        self.pixel_font = pygame.font.Font('font/Pixeltype.ttf', 50)
-        self.micro_pixel_font = pygame.font.Font('font/Pixeltype.ttf', 30)
+        self.main_font = 'font/Pixeltype.ttf'
+        # self.pixel_font = pygame.font.Font('font/Pixeltype.ttf', 50)
+        # self.micro_pixel_font = pygame.font.Font('font/Pixeltype.ttf', 30)
 
-        self.game_name_surf = self.pixel_font.render('Hohline Cherkasy', True, 'Red')
+        self.game_name_surf = self.text_to_surface_mf('Hohline Cherkasy', True, 'Red')
 
         self.sky_color_surf = pygame.Surface((800, 300))
         self.sky_color = ColorSine(phases=[math.pi * 0.5, math.pi * 0.7, 0],
@@ -228,7 +230,7 @@ class Game(object):
         self.screen.blit(self.sky_color_surf, (0, 0))
         self.screen.blit(self.sky_surf, (0, 0))
 
-        score_surf = self.pixel_font.render(f'Score: {min(self.score, 137)}', True, (44+200*bool(self.kill_run), 44, 44))
+        score_surf = self.text_to_surface_mf(f'Score: {min(self.score, 137)}', True, (44+200*bool(self.kill_run), 44, 44))
         score_rect = score_surf.get_rect(center=(400, 80))
         self.screen.blit(score_surf, score_rect)
 
@@ -266,9 +268,9 @@ class Game(object):
             score_line = ''
             new_game_line = 'Press Y key to start'
 
-        final_score_surf = self.pixel_font.render(score_line, True, 'Red')
+        final_score_surf = self.text_to_surface_mf(score_line, True, 'Red')
         final_score_rect = final_score_surf.get_rect(center=(400, 200))
-        new_game_surf = self.pixel_font.render(new_game_line, True, 'Red')
+        new_game_surf = self.text_to_surface_mf(new_game_line, True, 'Red')
         new_game_rect = new_game_surf.get_rect(midleft=(400, 250))
         self.screen.blit(final_score_surf, final_score_rect)
         self.screen.blit(new_game_surf, new_game_rect)
@@ -333,7 +335,8 @@ class Game(object):
             oob_marker_surf = pygame.transform.scale(self.oob_pointer, (40, 20))
             oob_marker_rect = oob_marker_surf.get_rect(midtop=(self.player_sprite.rect.centerx, 5))
 
-            oob_text_surf = self.micro_pixel_font.render(f'{-(self.player_sprite.rect.bottom - 10)//48}m', True, (237, 28, 36))
+            oob_text_surf = self.text_to_surface_mf(f'{-(self.player_sprite.rect.bottom - 10)//48}m',
+                                                    True, (237, 28, 36), size=30)
             oob_text_rect = oob_text_surf.get_rect(midtop=[oob_marker_rect.centerx, oob_marker_rect.bottom + 3])
 
             self.screen.blit(oob_marker_surf, oob_marker_rect)
@@ -353,6 +356,10 @@ class Game(object):
             self.fly_speed_range = [FLY_SPEED_RANGE[0] + 50 + self.score, FLY_SPEED_RANGE[1] + 2*self.score]
 
             self.last_rescale_score = self.score
+
+    def text_to_surface_mf(self, text, antialias, color, bg=None, size=50):
+        _font = pygame.font.Font(self.main_font, size)
+        return _font.render(text, antialias, color, bg)
 
 a = Game()
 
