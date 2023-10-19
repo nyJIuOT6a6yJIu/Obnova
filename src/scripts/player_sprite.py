@@ -38,16 +38,33 @@ class Player(pygame.sprite.Sprite):
             self.d_pressed = True
         if key_pressed == pygame.K_d and released:
             self.d_pressed = False
+
+        if key_pressed == 1:  # LMB
+            # if ammo # TODO: add ammo
+            shot = self.game.shoot_at_enemy()
+            for enemy in shot:
+                if enemy.get_type() == 'snail':
+                    self.game.score += 2
+                else:
+                    self.game.score += 3
+                self.game.gun_sound.play()
+                self.game.after_image.append([self.game.mouse.rect.center, 100.0])
+                enemy.mask.kill()
+                enemy.kill()
+                self.game.kill_run = True
+
+        elif key_pressed == 3: # RMB
+            print('rmb')
         if self.a_pressed or self.d_pressed:
             self.speed[0] = 300*bool(self.d_pressed) - 300*bool(self.a_pressed)
 
     def _movement(self):
-        gravity_acc = 4000
-        # stiffness = 1
+        gravity_acc = self.game.gravity_acceleration
+        stiffness = self.game.ground_stiffness
 
-        if abs(self.rect.centerx - self.center[0]) > 2:  # ???
+        if abs(self.rect.centerx - self.center[0]) > 2:
             self.center[0] = self.rect.centerx
-        if abs(self.rect.centery - self.center[1]) > 2:  # ???
+        if abs(self.rect.centery - self.center[1]) > 2:
             self.center[1] = self.rect.centery
 
         self.center[0] += self.speed[0] * self.game.delta_time / 1000
@@ -55,7 +72,7 @@ class Player(pygame.sprite.Sprite):
 
         self.rect.center = [int(self.center[0]), int(self.center[1])]
 
-        if self.rect.bottom > 300:
+        if self.rect.bottom >= 300:
             self.rect.bottom = 300
             self.speed[1] = 0
             self.jumps = self.max_jumps
@@ -67,8 +84,12 @@ class Player(pygame.sprite.Sprite):
         elif self.rect.right > 780:
             self.rect.right = 780
         if abs(self.speed[0]) >= 1:
-            if not (self.a_pressed or self.d_pressed):
-                self.speed[0] -= 0.4*abs(self.speed[0])*self.speed[0]/abs(self.speed[0])
+            if not (self.a_pressed or self.d_pressed):# and self.rect.bottom >= 300:
+                minus = stiffness*self.game.delta_time / 1000
+                if abs(self.speed[0]) > abs(minus):
+                    self.speed[0] -= minus*self.speed[0]/abs(self.speed[0])
+                else:
+                    self.speed[0] = 0
 
     def set_attachments(self, mask: bool = True, weapon: bool = True):
         self.mask = mask
@@ -99,8 +120,8 @@ class Mask(pygame.sprite.Sprite):
         self.body = _player
 
     def update(self):
-        if not self.body.mask:
-            self.image.set_alpha(100)
+        if self.body.mask:
+            self.image.set_alpha(255)
         else:
             self.image.set_alpha(0)
         self.rect.center = (self.body.rect.midtop[0] + 7, self.body.rect.midtop[1] + 23)
@@ -114,8 +135,8 @@ class Weapon(pygame.sprite.Sprite):
         self.body = _player
 
     def update(self):
-        if not self.body.weapon:
-            self.image.set_alpha(100)
+        if self.body.weapon:
+            self.image.set_alpha(255)
         else:
             self.image.set_alpha(0)
         self.rect.midleft = (self.body.rect.left, self.body.rect.midleft[1] + 15)

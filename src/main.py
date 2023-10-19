@@ -1,19 +1,17 @@
 # TODO:
 #  ammo count, weapon drop, weapon pickup
-#  during first game: change tooltips,
+#  - during first game: change tooltips,
 #                     revert graphics,
-#                     remove lasersight & shooting,
+#                     remove gun,
 #                     remove animal masks and reduce stats to original
-#  pacifist root - unlocks sralker teaser
-#  nuke animation with poroshenko
-#  and WASTED and 'pacan k uspehoo shol' on consequent plays
+#  - pacifist root - unlocks sralker teaser
+#  - nuke animation with poroshenko
+#  and WASTED and 'pacan k uspe hoo shol' on consequent plays
 #  add transparent tooltips
-#  add score and game timer
-#  add more features for kills
-#  add scaling if killrun
-#  add oof deathsound
-#  add zebra mask and dodge ability after nuke ending
-#  introduce speed limit (so that game wont crush)
+#  configure first run
+#  (?) add game timer
+#  - add zebra mask and dodge ability after nuke ending
+#  - introduce speed limit (so that game wont crush)
 
 import math
 import random
@@ -25,23 +23,16 @@ from scripts.color_sine import ColorSine
 from scripts.player_sprite import Player, Mask, Weapon
 from scripts.enemy_sprites import Fly, Snail
 
-# TODO: implement shooting and aiming
-# def enemy_shot(point, enemy_list: list):
-#     shot = []
-#     for i in enemy_list:
-#         if i[0].collidepoint(point):
-#             shot.append(i)
-#     if shot:
-#         return shot
-#     else:
-#         return None
-#
-# def aim_at_enemy(point, enemy_list: list):
-#     for i in enemy_list:
-#         if i[0].collidepoint(point):
-#             return True
-#     else:
-#         return False
+from config.config import SCREEN_RESOLUTION,\
+                          DISPLAY_CAPTION,\
+                          GRAVITY_ACCELERATION,\
+                          GROUND_STIFFNESS,\
+                          ENEMY_SPAWN_INTERVAL_MS,\
+                          ENEMY_PLACEMENT_RANGE,\
+                          SNAIL_SPEED_RANGE,\
+                          FLY_SPEED_RANGE
+
+# 48px = 1 meter
 
 class Game(object):
     def __new__(cls):
@@ -52,17 +43,21 @@ class Game(object):
     def __init__(self):
         pygame.init()
 
-        self.screen = pygame.display.set_mode((800, 400))
+        self.screen = pygame.display.set_mode(SCREEN_RESOLUTION)
 
         self.load_images()
 
-        pygame.display.set_caption('Obnova v0.0.0.2')
+        pygame.display.set_caption(DISPLAY_CAPTION)
         pygame.display.set_icon(self.rooster_mask)
 
         # self.start_time = 0
+        self.mouse = pygame.sprite.Sprite()
+        self.mouse.image = pygame.Surface((2, 2))
+        self.mouse.rect = pygame.Rect(0, 0, 2, 2)
 
         self.clock = pygame.time.Clock()
         self.pixel_font = pygame.font.Font('font/Pixeltype.ttf', 50)
+        self.micro_pixel_font = pygame.font.Font('font/Pixeltype.ttf', 30)
 
         self.game_name_surf = self.pixel_font.render('Hohline Cherkasy', True, 'Red')
 
@@ -81,14 +76,14 @@ class Game(object):
         self.gun_sound.set_volume(1.1)
         self.death_sound.set_volume(1.3)
         self.death_sound_2.set_volume(1.3)
+        self.death_sound_3.set_volume(5)
 
         self.bg_music.set_volume(0.3)
         self.menu_music.set_volume(0.2)
 
         self.enemy_spawn_timer = pygame.USEREVENT + 1
 
-        self.fresh_start = True
-        self.set_up_game()
+        self.set_up_game('first')  # TODO: cache check
         self.game_loop()
 
     def load_images(self):
@@ -107,14 +102,19 @@ class Game(object):
 
         self.fly_1         = pygame.image.load('graphics/fly/Fly1.png').convert_alpha()
         self.fly_2         = pygame.image.load('graphics/fly/Fly2.png').convert_alpha()
+        self.fly_mask      = pygame.image.load('graphics/fly/owl.png').convert_alpha()
 
         self.snail_1       = pygame.image.load('graphics/snail/snail1.png').convert_alpha()
         self.snail_2       = pygame.image.load('graphics/snail/snail2.png').convert_alpha()
+        self.snail_mask    = pygame.image.load('graphics/snail/dog.png').convert_alpha()
+
+        self.oob_pointer   = pygame.image.load('graphics/oob_pointer.png').convert_alpha()
 
     def load_sounds(self):
         self.gun_sound     = pygame.mixer.Sound('audio/gunshot.mp3')
         self.death_sound   = pygame.mixer.Sound('audio/death.mp3')
         self.death_sound_2 = pygame.mixer.Sound('audio/death2.mp3')
+        self.death_sound_3 = pygame.mixer.Sound('audio/death3.mp3')
 
         self.bg_music      = pygame.mixer.Sound('audio/miami.mp3')
         self.menu_music    = pygame.mixer.Sound('audio/menu.mp3')
@@ -131,7 +131,7 @@ class Game(object):
             self.current_track.stop()
         self.current_track = None
 
-    def set_up_game(self):
+    def set_up_game(self, mode='default'):
         self.player = pygame.sprite.GroupSingle()
         self.player_sprite = Player(self)
         self.player.add(self.player_sprite)
@@ -156,19 +156,25 @@ class Game(object):
 
         self.delta_time = 0
         self.last_time_frame = pygame.time.get_ticks()
+        self.last_rescale_score = None
 
-        pygame.time.set_timer(self.enemy_spawn_timer, 1500)
+        self.gravity_acceleration = GRAVITY_ACCELERATION
+        self.ground_stiffness = GROUND_STIFFNESS
 
-        self.game_active = True
-        self.menu_music.play(loops=-1, fade_ms=400)
+        self.enemy_spawn_interval = ENEMY_SPAWN_INTERVAL_MS
 
-        # TODO: restart music
-        # bg_music.stop()
-        # menu_music.stop()
-        # bg_music.play(loops=-1, fade_ms=400)
-        # TODO: restart game
-        # start_time = pygame.time.get_ticks()
-        # fresh_start = False
+        pygame.time.set_timer(self.enemy_spawn_timer, self.enemy_spawn_interval, 1)
+
+        self.enemy_placement_range = ENEMY_PLACEMENT_RANGE
+        self.snail_speed_range = SNAIL_SPEED_RANGE
+        self.fly_speed_range =  FLY_SPEED_RANGE
+
+        self.game_state = 1  # -1 first time; -2 first menu; 0 - menu; 1 default game
+        self.kill_run = False
+        if mode == 'first':
+            self.music_play(self.menu_music)
+        elif mode == 'default':
+            self.music_play(self.bg_music)
 
     def game_loop(self):
         while True:
@@ -176,10 +182,11 @@ class Game(object):
             self.last_time_frame = pygame.time.get_ticks()
 
             self.event_loop()
-            if self.game_active:
-                self.runtime_frame()
-            else:
-                self.menu_frame()
+            match self.game_state:
+                case 1:
+                    self.runtime_frame()
+                case 0:
+                    self.menu_frame()
             pygame.display.update()
             self.clock.tick(60)
 
@@ -188,18 +195,24 @@ class Game(object):
             if event.type == pygame.QUIT:
                 pygame.quit()
                 exit()
-            if self.game_active:
+            if self.game_state in [-1, 1]:
                 # players controls
                 if event.type == pygame.KEYDOWN:
                     self.player_sprite.player_input(event.key, False)
                 if event.type == pygame.KEYUP:
                     self.player_sprite.player_input(event.key, True)
 
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    self.player_sprite.player_input(event.button, False)
+
+
                 # enemy spawn
                 if event.type == self.enemy_spawn_timer:
                     self.add_new_enemy(3, 1)
+                    pygame.time.set_timer(self.enemy_spawn_timer, self.enemy_spawn_interval, 1)
 
-            if not self.game_active and event.type == pygame.KEYDOWN and event.key == pygame.K_y:
+
+            if self.game_state in [-2, 0] and event.type == pygame.KEYDOWN and event.key == pygame.K_y:
                 self.set_up_game()
 
     def runtime_frame(self):
@@ -210,14 +223,13 @@ class Game(object):
         self.screen.blit(self.ground_surf, (0, 300))
 
         self.sky_color_surf.fill(self.sky_color.return_color())
-        inc = self.delta_time*60/1000
-        self.sky_color.increment(inc)
+        self.sky_color.increment(self.delta_time*60/1000)
 
         self.screen.blit(self.sky_color_surf, (0, 0))
         self.screen.blit(self.sky_surf, (0, 0))
 
-        score_surf = self.pixel_font.render(f'Score: {self.score}', True, (44, 44, 44))
-        score_rect = score_surf.get_rect(center=(400, 50))
+        score_surf = self.pixel_font.render(f'Score: {min(self.score, 137)}', True, (44+200*bool(self.kill_run), 44, 44))
+        score_rect = score_surf.get_rect(center=(400, 80))
         self.screen.blit(score_surf, score_rect)
 
         self.player.update()
@@ -225,23 +237,22 @@ class Game(object):
         self.player.draw(self.screen)
         self.player_attachments.draw(self.screen)
 
+
+
         self.enemy_group.update()
         self.enemy_group.draw(self.screen)
 
-        # lasersight
-        # if not fresh_start and aim_at_enemy(pygame.mouse.get_pos(), enemy_rect_list):
-        #     pygame.draw.line(screen, "Red", (gun_rect.midright[0]-30, gun_rect.midright[1]-3), pygame.mouse.get_pos(),
-        #                      width=2)
+        self.enemy_attachments.update()
+        self.enemy_attachments.draw(self.screen)
 
-        # for index, i in enumerate(after_image):
-        #     if i[0] > 0:
-        #         pygame.draw.line(screen, (255, 255, 100), (gun_rect.midright[0]-8, gun_rect.midright[1]-4), i[1],
-        #                      width = int(6 * math.sin(i[0]*math.pi/8)))
-        #         i[0] -= 1
-        #     else:
-        #         after_image.pop(index)
+        self.draw_laser_sight()
+        self.draw_shot_after_image()
+        self.draw_out_of_bounds_marker()
 
-        self.game_active = self.enemy_collision()
+        self.difficulty_scaling()
+
+        if self.enemy_collision():
+            self.game_state = 0
         self.game_over()
 
     def menu_frame(self):
@@ -249,7 +260,7 @@ class Game(object):
 
         self.screen.blit(self.player_menu, self.player_menu_rect)
 
-        score_line = f'You killed {self.score} enemies.'
+        score_line = f'Your score is {self.score}'
         new_game_line = 'Press  Y to continue'
         if self.score == 0:
             score_line = ''
@@ -267,40 +278,81 @@ class Game(object):
         self.sky_color.increment(inc)
 
     def game_over(self):
-        if not self.game_active:
-            ds = random.choice([self.death_sound, self.death_sound_2])
+        if self.game_state in [-2, 0]:
+            ds = random.choice([self.death_sound, self.death_sound_2, self.death_sound_3])
             ds.play()
             self.sky_color.increment(50)
             self.bg_music.fadeout(1500)
-
-    # def get_current_time(self):
-    #     current_time = (pygame.time.get_ticks() - self.start_time)//1000
-    #     return current_time
+            # print(self.player_sprite.rect.top - self.player_sprite.rect.bottom)
 
     def add_new_enemy(self, snail_relative_chance: int, fly_relative_chance: int):
         if random.randint(1, snail_relative_chance + fly_relative_chance) <= fly_relative_chance:
             a = Fly(self)
-            a.rect.midbottom = (random.randint(810, 1010), 150)
-            a.set_speed(v_x=-1 * random.randint(300, 540))
+            a.rect.bottomleft = (random.randint(self.enemy_placement_range[0], self.enemy_placement_range[1]), 150)
+            a.set_speed(v_x=-1 * random.randint(self.fly_speed_range[0], self.fly_speed_range[1]))
             self.enemy_group.add(a)
             del a
         else:
             a = Snail(self)
-            a.rect.midbottom = (random.randint(810, 1010), 300)
-            a.set_speed(v_x=-1 * random.randint(240, 480))
+            a.rect.bottomleft = (random.randint(self.enemy_placement_range[0], self.enemy_placement_range[1]), 300)
+            a.set_speed(v_x=-1 * random.randint(self.snail_speed_range[0], self.snail_speed_range[1]))
             self.enemy_group.add(a)
             del a
 
     def enemy_collision(self) -> bool:
         collisions = pygame.sprite.spritecollide(self.player_sprite, self.enemy_group, False)
-        return not bool(collisions)
+        return bool(collisions)
 
+    def aim_at_enemy(self):
+        self.mouse.rect.center = pygame.mouse.get_pos()
+        if pygame.sprite.spritecollide(self.mouse, self.enemy_group, False):
+            return self.mouse.rect.center
 
-# TODO: add masks back
-# dog_surf = pygame.transform.scale(pygame.image.load('graphics/snail/dog.png').convert_alpha(), (35, 45))
-# dog_rect.bottomleft = (enemy.bottomleft[0] - 5, enemy.bottomleft[1])
-# owl_surf = pygame.transform.scale(pygame.image.load('graphics/fly/owl.png').convert_alpha(), (35, 45))
-# owl_rect.center = (enemy.center[0] - 5, enemy.center[1])
+    def draw_laser_sight(self):
+        if self.player_sprite.weapon:
+            enemy_pos = self.aim_at_enemy()
+            if enemy_pos:
+                start_pos = (self.gun_sprite.rect.right - 40, self.gun_sprite.rect.centery - 2)
+                pygame.draw.line(self.screen, (240, 0, 0), start_pos, enemy_pos, 2)
+
+    def shoot_at_enemy(self):
+        self.mouse.rect.center = pygame.mouse.get_pos()
+        return pygame.sprite.spritecollide(self.mouse, self.enemy_group, False)
+
+    def draw_shot_after_image(self):
+        for index, i in enumerate(self.after_image):
+            if i[1] > 0.0:
+                pygame.draw.line(self.screen, (255, 255, 100), (self.gun_sprite.rect.midright[0]-8, self.gun_sprite.rect.midright[1]-4), i[0],
+                             width= int(6 * math.sin(i[1]*math.pi/100.0)))
+                i[1] -= self.delta_time
+            else:
+                self.after_image.pop(index)
+
+    def draw_out_of_bounds_marker(self):
+        if self.player_sprite.rect.bottom < -10:
+            oob_marker_surf = pygame.transform.scale(self.oob_pointer, (40, 20))
+            oob_marker_rect = oob_marker_surf.get_rect(midtop=(self.player_sprite.rect.centerx, 5))
+
+            oob_text_surf = self.micro_pixel_font.render(f'{-(self.player_sprite.rect.bottom - 10)//48}m', True, (237, 28, 36))
+            oob_text_rect = oob_text_surf.get_rect(midtop=[oob_marker_rect.centerx, oob_marker_rect.bottom + 3])
+
+            self.screen.blit(oob_marker_surf, oob_marker_rect)
+            self.screen.blit(oob_text_surf, oob_text_rect)
+
+    # def draw_tool_tips(self):
+
+    def difficulty_scaling(self):  # TODO: ammo capacity, weapon spawn etc
+        if self.kill_run and self.score != self.last_rescale_score:
+            self.ground_stiffness = GROUND_STIFFNESS * (131 - self.score)/137
+
+            self.player_sprite.max_jumps = 1 + self.score//30
+
+            self.enemy_spawn_interval = ENEMY_SPAWN_INTERVAL_MS - 7 * self.score
+            self.enemy_placement_range = [ENEMY_PLACEMENT_RANGE[0], ENEMY_PLACEMENT_RANGE[1] - self.score]
+            self.snail_speed_range = [SNAIL_SPEED_RANGE[0] + 50 + self.score, SNAIL_SPEED_RANGE[1] + 2*self.score]
+            self.fly_speed_range = [FLY_SPEED_RANGE[0] + 50 + self.score, FLY_SPEED_RANGE[1] + 2*self.score]
+
+            self.last_rescale_score = self.score
 
 a = Game()
 
