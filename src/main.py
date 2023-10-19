@@ -1,4 +1,5 @@
 # TODO:
+#  git push
 #  ammo count, weapon drop, weapon pickup
 #  - during first game: change tooltips,
 #                     revert graphics,
