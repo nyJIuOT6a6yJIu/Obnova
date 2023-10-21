@@ -24,6 +24,8 @@ class Player(pygame.sprite.Sprite):
         self.rect = self.image.get_rect(midbottom=(80, 300))
         self.center = [0.0, 0.0]
 
+        self.weapon = None
+
         self.set_attachments()
 
     def player_input(self, key_pressed, released=False):
@@ -40,21 +42,16 @@ class Player(pygame.sprite.Sprite):
             self.d_pressed = False
 
         if key_pressed == 1:  # LMB
-            # if ammo # TODO: add ammo
-            shot = self.game.shoot_at_enemy()
-            for enemy in shot:
-                if enemy.get_type() == 'snail':
-                    self.game.score += 2
-                else:
-                    self.game.score += 3
-                self.game.gun_sound.play()
-                self.game.after_image.append([self.game.mouse.rect.center, 100.0])
-                enemy.mask.kill()
-                enemy.kill()
-                self.game.kill_run = True
+            if self.weapon:
+                shot = self.game.shoot_at_enemy()
+                self.weapon.shoot_at(shot)
 
         elif key_pressed == 3: # RMB
-            print('rmb')
+            pickups = pygame.sprite.spritecollide(self, self.game.pickups, dokill=False)
+            if pickups:
+                self.pick_up_weapon(pickups[0])
+            else:
+                self.drop_weapon()
         if self.a_pressed or self.d_pressed:
             self.speed[0] = 300*bool(self.d_pressed) - 300*bool(self.a_pressed)
 
@@ -91,9 +88,23 @@ class Player(pygame.sprite.Sprite):
                 else:
                     self.speed[0] = 0
 
-    def set_attachments(self, mask: bool = True, weapon: bool = True):
+    def set_attachments(self, mask: bool = True):
         self.mask = mask
+        # self.weapon = weapon
+
+    def pick_up_weapon(self, weapon):
+        if self.weapon:
+            self.drop_weapon()
         self.weapon = weapon
+        self.game.pickups.remove(weapon)
+        self.game.player_attachments.add(weapon)
+        weapon.set_body(self)
+
+    def drop_weapon(self):
+        if self.weapon:
+            self.weapon.body = None
+            self.weapon.kill() # TODO: yeet it instead
+            self.weapon = None
 
     def _animate(self):
         if self.rect.bottom < 300:
@@ -128,15 +139,41 @@ class Mask(pygame.sprite.Sprite):
 
 
 class Weapon(pygame.sprite.Sprite):
-    def __init__(self, _player: Player):
+    def __init__(self, game, pos=None):
         super().__init__()
-        self.image = pygame.transform.scale(_player.game.weapon, (120, 60))
+        self.game = game
+
+        self.image = pygame.transform.scale(game.weapon, (120, 60))
         self.rect = self.image.get_rect()
-        self.body = _player
+        if pos:
+            self.rect.midbottom = pos
+
+        self.ammo = game.max_ammo
+        self.body = None
+
+    def set_body(self, _body):
+        self.body = _body
+
+    def shoot_at(self, shot):
+        if not self.ammo:
+            self.game.empty_gun_sound.play()
+        elif shot:
+            for enemy in shot:
+                if enemy.get_type() == 'snail':
+                    self.game.score += 2
+                elif enemy.get_type() == 'fly':
+                    self.game.score += 3
+                enemy.mask.kill()
+                enemy.kill()
+
+            self.game.gun_sound.play()
+            self.game.gunshot_afterimage.append([pygame.mouse.get_pos(), 100.0])
+
+            if not self.game.kill_run:
+                self.game.kill_run_init_sound.play()
+            self.game.kill_run = True
+            self.ammo -= 1
 
     def update(self):
-        if self.body.weapon:
-            self.image.set_alpha(255)
-        else:
-            self.image.set_alpha(0)
-        self.rect.midleft = (self.body.rect.left, self.body.rect.midleft[1] + 15)
+        if self.body:
+            self.rect.midleft = (self.body.rect.left, self.body.rect.midleft[1] + 15)

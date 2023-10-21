@@ -1,4 +1,7 @@
 import pygame
+import random
+
+from src.scripts.player_sprite import Weapon
 
 
 class Fly(pygame.sprite.Sprite):
@@ -93,6 +96,11 @@ class Snail(pygame.sprite.Sprite):
     @staticmethod
     def get_type():
         return 'snail'
+
+    def kill(self):
+        if self.rect.left > 100 and self.rect.right < 700 and len(self.game.pickups) < 3 and random.randint(1, 100) <= self.game.pickup_rate:
+            self.game.pickups.add(Weapon(self.game, self.rect.midbottom))
+        super().kill()
 
 
 class FlyMask(pygame.sprite.Sprite):
