@@ -11,5 +11,7 @@ PICKUP_DROP_RATE       : Final = 20
 
 ENEMY_SPAWN_INTERVAL_MS: Final = 1500
 ENEMY_PLACEMENT_RANGE  : Final = [810, 1010]
+FLY_Y_RANGE            : Final = [150, 150]
+
 SNAIL_SPEED_RANGE      : Final = [240, 480]
 FLY_SPEED_RANGE        : Final = [300, 540]

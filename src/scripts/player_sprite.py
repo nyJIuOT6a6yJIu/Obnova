@@ -1,3 +1,5 @@
+import math
+
 import pygame
 
 
@@ -30,7 +32,7 @@ class Player(pygame.sprite.Sprite):
 
     def player_input(self, key_pressed, released=False):
         if self.jumps and (key_pressed == pygame.K_SPACE or key_pressed == pygame.K_w) and not released:
-            self.speed[1] = -1200
+            self.speed[1] = -1250
             self.jumps -= 1
         if key_pressed == pygame.K_a and not released:
             self.a_pressed = True
@@ -99,6 +101,7 @@ class Player(pygame.sprite.Sprite):
         self.game.pickups.remove(weapon)
         self.game.player_attachments.add(weapon)
         weapon.set_body(self)
+        self.game.gun_pickup_sound.play()
 
     def drop_weapon(self):
         if self.weapon:
@@ -150,6 +153,7 @@ class Weapon(pygame.sprite.Sprite):
 
         self.ammo = game.max_ammo
         self.body = None
+        self.t = 0
 
     def set_body(self, _body):
         self.body = _body
@@ -159,10 +163,7 @@ class Weapon(pygame.sprite.Sprite):
             self.game.empty_gun_sound.play()
         elif shot:
             for enemy in shot:
-                if enemy.get_type() == 'snail':
-                    self.game.score += 2
-                elif enemy.get_type() == 'fly':
-                    self.game.score += 3
+                self.game.score_add(f'{enemy.get_type()}_kill')
                 enemy.mask.kill()
                 enemy.kill()
 
@@ -177,3 +178,6 @@ class Weapon(pygame.sprite.Sprite):
     def update(self):
         if self.body:
             self.rect.midleft = (self.body.rect.left, self.body.rect.midleft[1] + 15)
+        else:
+            self.rect.bottom = 303 + 3*math.cos(self.t*math.pi/1100)
+            self.t = (self.t + self.game.delta_time)%2200

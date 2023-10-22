@@ -17,7 +17,10 @@ class Fly(pygame.sprite.Sprite):
         self.center = [0.0, 0.0]
         self.speed = [0, 0]
 
-        self.mask_bool = True
+        if self.game.game_state == 1:
+            self.mask_bool = True
+        elif self.game.game_state == -1:
+            self.mask_bool = False
         self.mask = FlyMask(self)
         self.game.enemy_attachments.add(self.mask)
 
@@ -33,7 +36,7 @@ class Fly(pygame.sprite.Sprite):
         self.center[0] += self.speed[0] * self.game.delta_time / 1000
         self.rect.centerx = int(self.center[0])
         if self.rect.right < -10:
-            self.game.score += 1
+            self.game.score_add('pass')
             self.mask.kill()
             self.kill()
 
@@ -64,7 +67,10 @@ class Snail(pygame.sprite.Sprite):
         self.center = [0.0, 0.0]
         self.speed = [0, 0]
 
-        self.mask_bool = True
+        if self.game.game_state == 1:
+            self.mask_bool = True
+        elif self.game.game_state == -1:
+            self.mask_bool = False
         self.mask = SnailMask(self)
         self.game.enemy_attachments.add(self.mask)
 
@@ -80,7 +86,8 @@ class Snail(pygame.sprite.Sprite):
         self.center[0] += self.speed[0] * self.game.delta_time / 1000
         self.rect.centerx = int(self.center[0])
         if self.rect.right < -10:
-            self.game.score += 1
+            self.game.score_add('pass')
+            self.mask.kill()
             self.kill()
 
     def _animate(self):
