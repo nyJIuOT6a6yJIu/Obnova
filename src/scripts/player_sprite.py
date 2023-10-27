@@ -66,6 +66,8 @@ class Player(pygame.sprite.Sprite):
         if abs(self.rect.centery - self.center[1]) > 2:
             self.center[1] = self.rect.centery
 
+        self.speed[1] += gravity_acc * self.game.delta_time / 2000
+
         self.center[0] += self.speed[0] * self.game.delta_time / 1000
         self.center[1] += self.speed[1] * self.game.delta_time / 1000
 
@@ -76,7 +78,7 @@ class Player(pygame.sprite.Sprite):
             self.speed[1] = 0
             self.jumps = self.max_jumps
         else:
-            self.speed[1] += gravity_acc * self.game.delta_time / 1000
+            self.speed[1] += gravity_acc * self.game.delta_time / 2000
 
         if self.rect.left < 0:
             self.rect.left = 0

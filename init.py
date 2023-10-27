@@ -8,7 +8,7 @@ try:
 except FileNotFoundError:
     progress = None
 
-game = HMGame()#progress)
+game = HMGame(progress)
 
 new_save = game.start_game()
 new_save = dumps(new_save)

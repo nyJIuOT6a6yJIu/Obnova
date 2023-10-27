@@ -1,24 +1,23 @@
 # TODO:
 #  - pacifist root - unlocks sralker teaser
 #  .
-#  - nuke animation with poroshenko
+#  nuke animation with poroshenko
 #  .
-#  add more patterns for enemies (enter the sand man): frogs (snail) are slower but jump/lunge
-#                                                      bats (fly) are slower but fly unpredictibly &
-#                                                      chams (snail) are slow but have alpha channel
-#  add enviromental hazards (enter the sand man)
-#  - freeze pickup (розібратись з мікшером, щоб ставити музику на паузу)
+#  - (?) add more patterns for enemies (enter the sand man): frogs (snail) are slower but jump/lunge
+#  .
+#  - (?) add enviromental hazards (enter the sand man)
+#  - (?) freeze pickup (розібратись з мікшером, щоб ставити музику на паузу)
 #  .
 #  - wojaks during nuke
 #  .
-#  - add "block 1 hit, then kill everyone" mask (after 49 deaths) (music??? maybe way home)
-#  - add zebra mask and dodge ability after nuke ending (miami disco)
+#  - add "block 1 hit, then kill everyone" probably-pig mask (after 49 deaths) (music??? maybe way home)
+#  - add zebra mask and dodge ability after nuke ending (fun&games)
 #  - add tiger mask and kick ability after pacifist run (new wave hookers)
-#  - add bear mask and stomp ability after genocide run (music???)
 #  .
 #  - introduce speed limit (so that game wont crush)
 #  enter the sand man: after 110 points
 #  - add jump counter
+#  - add more scorepoints per action if achieved 110 before
 
 import math
 import random
@@ -27,7 +26,8 @@ import pygame
 
 from src.scripts.color_sine import ColorSine
 from src.scripts.player_sprite import Player, Mask, Weapon
-from src.scripts.enemy_sprites import Fly, Snail
+from src.scripts.fly_sprite import Fly, Bat
+from src.scripts.snail_sprite import Snail, Cham
 
 from src.config.config import SCREEN_RESOLUTION,\
                               DISPLAY_CAPTION,\
@@ -94,7 +94,8 @@ class HMGame(object):
         return cls.instance
 
     def __init__(self, progress=None):
-
+        if progress is None:
+            progress = dict()
         self.progress = progress
 
     def start_game(self):
@@ -120,7 +121,8 @@ class HMGame(object):
 
         self.game_name_surf = self.text_to_surface_mf('Hohline Cherkasy', True, 'Red')
 
-        self.sky_color_surf = pygame.Surface((800, 400))
+        self.sky_color_surf = pygame.Surface((800, 250))
+        self.sky_color_foreground = pygame.Surface((800, 400))
         self.sky_color = ColorSine(phases= [math.pi * 0.5, math.pi * 0.7, 0.0],
                                    freqs=  [1.1,           0.2,           1.0],
                                    statics=[0.5,           0.7,           0.7],
@@ -149,8 +151,10 @@ class HMGame(object):
         self.enter_the_sandman_music.set_volume(0.8)
 
         self.enemy_spawn_timer = pygame.USEREVENT + 1
-
-        self.set_up_game('first')  # TODO: cache check
+        _mode = 'default'
+        if not self.progress:
+            _mode = 'first'
+        self.set_up_game(_mode)  # TODO: cache check
         return self.game_loop()
 
     def load_images(self):
@@ -173,10 +177,14 @@ class HMGame(object):
         self.fly_1         = pygame.image.load('src/graphics/fly/Fly1.png').convert_alpha()
         self.fly_2         = pygame.image.load('src/graphics/fly/Fly2.png').convert_alpha()
         self.fly_mask      = pygame.image.load('src/graphics/fly/owl.png').convert_alpha()
+        self.bat_mask      = pygame.image.load('src/graphics/fly/bat.png').convert_alpha()
 
         self.snail_1       = pygame.image.load('src/graphics/snail/snail1.png').convert_alpha()
         self.snail_2       = pygame.image.load('src/graphics/snail/snail2.png').convert_alpha()
         self.snail_mask    = pygame.image.load('src/graphics/snail/dog.png').convert_alpha()
+        self.cham_1        = pygame.image.load('src/graphics/snail/cham1.png').convert_alpha()
+        self.cham_2        = pygame.image.load('src/graphics/snail/cham2.png').convert_alpha()
+        self.cham_mask     = pygame.image.load('src/graphics/snail/cham.png').convert_alpha()
 
         self.oob_pointer   = pygame.image.load('src/graphics/oob_pointer.png').convert_alpha()
 
@@ -223,7 +231,7 @@ class HMGame(object):
         self.enemy_group = pygame.sprite.LayeredUpdates()
         self.enemy_attachments = pygame.sprite.LayeredUpdates()
 
-        self.score = 0
+        self.score = 100
 
         self.gunshot_afterimage = []
 
@@ -257,6 +265,7 @@ class HMGame(object):
         self.game_state = {'first': -1, 'default': 1}[mode]
         self.advanced_enemies = False
         self.sky_color_surf.set_alpha(255)
+        self.sky_color_foreground.set_alpha(0)
         self.kill_run = False
         if mode == 'first':
             self.music_handler.music_play(self.menu_music)
@@ -265,7 +274,6 @@ class HMGame(object):
 
     def game_loop(self):
         while self.game_state != -100:
-            self.delta_time = (pygame.time.get_ticks() - self.last_time_frame)
             self.last_time_frame = pygame.time.get_ticks()
 
             self.event_loop()
@@ -281,6 +289,7 @@ class HMGame(object):
             if self.game_state != -100:
                 pygame.display.update()
                 self.clock.tick(60)
+                self.delta_time = (pygame.time.get_ticks() - self.last_time_frame)
         return self.progress
 
     def event_loop(self):
@@ -324,20 +333,23 @@ class HMGame(object):
                 self.set_up_game()
 
     def runtime_frame(self, mode='default'):
-
-        self.sky_color_surf.fill(self.sky_color.return_color())
-        inc = self.delta_time*60/1000
-        if self.advanced_enemies:
+        sky_color = self.sky_color.return_color()
+        inc = self.delta_time * 60 / 1000
+        if not self.advanced_enemies:
+            self.sky_color_surf.fill(sky_color)
+        else:
+            self.sky_color_foreground.fill(sky_color)
             inc = inc * 2
         self.sky_color.increment(inc)
+        self.screen.blit(self.ground_surf, (0, 300))
 
         if mode == 'default':
             if not self.advanced_enemies:
-                self.screen.blit(self.sky_color_surf, (0, 0))
+                self.screen.blit(self.sky_color_surf, (0, 0))  # TODO: щось тут спичиняє фрізи
             self.screen.blit(self.sky_surf, (0, 0))
         elif mode == 'first':
             self.screen.blit(self.normal_sky_surf, (0, 0))
-        self.screen.blit(self.ground_surf, (0, 300))
+
         score_surf = self.text_to_surface_mf(f'Score: {int(min(self.score, 137))}', True, (44+200*bool(self.kill_run or int(self.score) >= 110),
                                                                                       44+200*bool(not self.kill_run and int(self.score) >= 110),
                                                                                       44))
@@ -374,10 +386,10 @@ class HMGame(object):
                 self.game_state = -2
         self.game_over()
 
-        # TODO: bg will be colored and sky will be trippy
+        # # TODO: bg will be colored and sky will be trippy
         if self.advanced_enemies:
-            self.sky_color_surf.set_alpha(int(self.score)-100)
-            self.screen.blit(self.sky_color_surf, (0, 0))
+            self.sky_color_foreground.set_alpha(int(self.score)-50)
+            self.screen.blit(self.sky_color_foreground, (0, 0))
 
 
     def menu_frame(self, mode='default'):
@@ -419,23 +431,41 @@ class HMGame(object):
             self.sky_color.increment(50)
             if self.game_state == 0:
                 self.music_handler.music_stop(1500)
+            self.progress['highscore'] = max(self.progress.get('highscore', 0), int(self.score))
+            if self.score >= 110:
+                self.progress['achieved 110'] = True
+
             # print(self.player_sprite.rect.top - self.player_sprite.rect.bottom)
 
     def add_new_enemy(self, snail_relative_chance: int, fly_relative_chance: int):
         if random.randint(1, snail_relative_chance + fly_relative_chance) <= fly_relative_chance:
-            a = Fly(self)
-            a.rect.bottomleft = (random.randint(self.enemy_placement_range[0], self.enemy_placement_range[1]),
-                                 random.randint(self.fly_y_range[0], self.fly_y_range[1]))
-            a.set_speed(v_x=-1 * random.randint(self.fly_speed_range[0], self.fly_speed_range[1]))
-            self.enemy_group.add(a)
-            del a
+            if self.advanced_enemies and random.randint(1, 2) == 1:
+                a = Bat(self)
+                a.rect.bottomleft = (random.randint(self.enemy_placement_range[0], self.enemy_placement_range[1] + 100),
+                                     150)
+                a.set_speed(v_x=-1 * random.randint(self.fly_speed_range[0] - 50, self.fly_speed_range[1] - 50))
+                a.set_difficulty((int(self.score)-99)//10)
+                self.enemy_group.add(a)
+                del a
+            else:
+                a = Fly(self)
+                a.rect.bottomleft = (random.randint(self.enemy_placement_range[0], self.enemy_placement_range[1]),
+                                     random.randint(self.fly_y_range[0], self.fly_y_range[1]))
+                a.set_speed(v_x=-1 * random.randint(self.fly_speed_range[0], self.fly_speed_range[1]))
+                self.enemy_group.add(a)
+                del a
         else:
-            a = Snail(self)
+            if self.advanced_enemies and random.randint(1, 9) == 1:
+                a = Cham(self)
+                a.rect.bottomleft = (random.randint(815, 850), 300)
+                a.set_speed(v_x=-1 * random.randint(200, 300))
 
-            if self.game_state == -1 and len(self.enemy_spawn):
+            elif self.game_state == -1 and len(self.enemy_spawn):
+                a = Snail(self)
                 a.rect.bottomleft = (810, 300)
                 a.set_speed(v_x=-400)
             elif self.game_state in [-1, 1]:
+                a = Snail(self)
                 a.rect.bottomleft = (random.randint(self.enemy_placement_range[0], self.enemy_placement_range[1]), 300)
                 a.set_speed(v_x=-1 * random.randint(self.snail_speed_range[0], self.snail_speed_range[1]))
 
@@ -524,7 +554,7 @@ class HMGame(object):
             self.max_ammo = MAX_AMMO_CAPACITY - int(self.score)//6
             self.pickup_rate = PICKUP_DROP_RATE - int(self.score)//10
 
-            self.enemy_spawn_interval = ENEMY_SPAWN_INTERVAL_MS - 7 * int(self.score)
+            self.enemy_spawn_interval = ENEMY_SPAWN_INTERVAL_MS - 7 * int(self.score) - 50 * bool(self.advanced_enemies)
             self.enemy_placement_range = [ENEMY_PLACEMENT_RANGE[0], ENEMY_PLACEMENT_RANGE[1] - int(self.score)]
             self.fly_y_range = [FLY_Y_RANGE[0] - int(self.score)//2, FLY_Y_RANGE[1] + int(self.score)]
             self.snail_speed_range = [SNAIL_SPEED_RANGE[0] + 50 + int(self.score), SNAIL_SPEED_RANGE[1] + 2*int(self.score)]
@@ -535,6 +565,7 @@ class HMGame(object):
     def enter_the_sandman(self):
         if self.kill_run and int(self.score) >= 110:
             if not self.advanced_enemies:
+                # self.sky_color_surf.set_alpha(0)
                 self.kill_run_init_sound.play()
                 self.music_handler.music_play(self.enter_the_sandman_music)
             self.advanced_enemies = True
@@ -544,15 +575,24 @@ class HMGame(object):
         return _font.render(text, antialias, color, bg)
 
     def score_add(self, mode: str):
-        if not self.advanced_enemies:
+        if not self.progress.get('achieved 110', False) and not self.advanced_enemies:
             match mode:
                 case 'snail_kill':
-                    self.score += 2.5
+                    self.score += 2.0
                 case 'fly_kill':
-                    self.score += 3.5
+                    self.score += 3.0
                 case 'pass':
                     self.score += 1
-        if self.advanced_enemies:
+        elif self.progress.get('achieved 110', False) and not self.advanced_enemies:
+            if not self.advanced_enemies:
+                match mode:
+                    case 'snail_kill':
+                        self.score += 2.9
+                    case 'fly_kill':
+                        self.score += 3.9
+                    case 'pass':
+                        self.score += 1.9
+        else:
             match mode:
                 case 'snail_kill':
                     self.score += 0
