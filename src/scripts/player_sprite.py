@@ -58,7 +58,7 @@ class Player(pygame.sprite.Sprite):
             self.speed[0] = 300*bool(self.d_pressed) - 300*bool(self.a_pressed)
 
     def _movement(self):
-        if self.game.game_state == 45:
+        if self.game.game_state == self.game.NUKE_START:
             self.speed[0] = 0
         gravity_acc = self.game.gravity_acceleration
         stiffness = self.game.ground_stiffness

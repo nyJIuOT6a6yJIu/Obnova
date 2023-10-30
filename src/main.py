@@ -2,7 +2,7 @@
 #  - pacifist root - unlocks sralker teaser
 #  .
 #  nuke animation with poroshenko
-#  add 'sun' rays
+#  add post nuke credits
 #  .
 #  - (?) add more patterns for enemies (enter the sand man): frogs (snail) are slower but jump/lunge discard weapon on contact
 #  - swap roblox oof for minecraft one
@@ -10,11 +10,9 @@
 #  - (?) add enviromental hazards (enter the sand man)
 #  - (?) freeze pickup (розібратись з мікшером, щоб ставити музику на паузу)
 #  .
-#  - wojaks during nuke
-#  .
 #  - add "block 1 hit, then kill everyone" probably-pig mask (after 49 deaths) (music??? maybe way home)
 #  - add zebra mask and dodge ability after nuke ending (fun&games)
-#  - add tiger mask and kick ability after pacifist run (new wave hookers)
+#  - add tiger mask and kick/throw ability after pacifist run (new wave hookers)
 #  .
 #  - introduce speed limit (so that game wont crush)
 #  add jump counter
@@ -84,8 +82,6 @@ class MusicHandler:
     #         self.IsPaused = True
 
 class HMGame(object):
-
-    # -100 exit; -1 first time; -2 first menu; 0 menu; 1 default game; 45 nuke animation
     # 48px = 1 meter
 
     def __new__(cls, *args, **kwargs):
@@ -94,6 +90,15 @@ class HMGame(object):
         return cls.instance
 
     def __init__(self, progress=None):
+        self.EXIT = -100
+        self.FIRST_GAME = -1
+        self.FIRST_MENU = -2
+        self.DEFAULT_GAME = 1
+        self.DEFAULT_MENU = 0
+        self.NUKE_START = 45
+        self.NUKE_CREDITES = 46
+        self.NUKE_MENU = -46
+
         if progress is None:
             progress = dict()
         self.progress = progress
@@ -234,7 +239,7 @@ class HMGame(object):
         self.enemy_group = pygame.sprite.LayeredUpdates()
         self.enemy_attachments = pygame.sprite.LayeredUpdates()
 
-        self.score = 131
+        self.score = 0
 
         self.gunshot_afterimage = []
 
@@ -265,7 +270,7 @@ class HMGame(object):
         self.snail_speed_range = SNAIL_SPEED_RANGE
         self.fly_speed_range =  FLY_SPEED_RANGE
 
-        self.game_state = {'first': -1, 'default': 1}[mode]
+        self.game_state = {'first': self.FIRST_GAME, 'default': self.DEFAULT_GAME}[mode]
         self.advanced_enemies = False
         self.sky_color_surf.set_alpha(255)
         self.sky_color_foreground.set_alpha(0)
@@ -276,22 +281,22 @@ class HMGame(object):
             self.music_handler.music_play(self.bg_music)
 
     def game_loop(self):
-        while self.game_state != -100:
+        while self.game_state != self.EXIT:
             self.last_time_frame = pygame.time.get_ticks()
 
             self.event_loop()
             match self.game_state:
-                case 45:
+                case self.NUKE_START:
                     self.nuke_animation()
-                case 1:
+                case self.DEFAULT_GAME:
                     self.runtime_frame()
-                case 0:
+                case self.DEFAULT_MENU:
                     self.menu_frame()
-                case -1:
+                case self.FIRST_GAME:
                     self.runtime_frame('first')
-                case -2:
+                case self.FIRST_MENU:
                     self.menu_frame('first')
-            if self.game_state != -100:
+            if self.game_state != self.EXIT:
                 pygame.display.update()
                 self.clock.tick(60)
                 self.delta_time = (pygame.time.get_ticks() - self.last_time_frame)
@@ -301,9 +306,9 @@ class HMGame(object):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
-                self.game_state = -100
+                self.game_state = self.EXIT
                 # exit()
-            if self.game_state in [-1, 1]:
+            if self.game_state == self.FIRST_GAME or self.game_state == self.DEFAULT_GAME:
                 # players controls
 
                 if event.type == pygame.KEYDOWN:
@@ -317,10 +322,10 @@ class HMGame(object):
 
                 # enemy spawn
                 if event.type == self.enemy_spawn_timer:
-                    if self.game_state == 1:
+                    if self.game_state == self.DEFAULT_GAME:
                         self.add_new_enemy(3, 1)
                         pygame.time.set_timer(self.enemy_spawn_timer, self.enemy_spawn_interval, 1)
-                    elif self.game_state == -1:
+                    elif self.game_state == self.FIRST_GAME:
                         if self.enemy_spawn:
                             next_enemy = self.enemy_spawn.pop(0)
                             if next_enemy == 'snail':
@@ -334,7 +339,8 @@ class HMGame(object):
 
 
 
-            if self.game_state in [-2, 0] and event.type == pygame.KEYDOWN and event.key == pygame.K_y:
+            if self.game_state in [self.FIRST_MENU, self.DEFAULT_MENU] \
+                    and event.type == pygame.KEYDOWN and event.key == pygame.K_y:
                 self.set_up_game()
 
     def runtime_frame(self, mode='default'):
@@ -385,16 +391,16 @@ class HMGame(object):
         self.enter_the_sandman()
 
         if self.score >= 137:
-            self.game_state = 45 # TODO: nuke anim
+            self.game_state = self.NUKE_START
             self.music_handler.music_stop(1050)
             self.animation_time = pygame.time.get_ticks()
             return
 
         if self.enemy_collision():
-            if self.game_state == 1:
-                self.game_state = 0
-            elif self.game_state == -1:
-                self.game_state = -2
+            if self.game_state == self.DEFAULT_GAME:
+                self.game_state = self.DEFAULT_MENU
+            elif self.game_state == self.FIRST_GAME:
+                self.game_state = self.FIRST_MENU
         self.game_over()
 
         # # TODO: bg will be colored and sky will be trippy
@@ -501,6 +507,8 @@ class HMGame(object):
 
         # self.difficulty_scaling()
         # self.enter_the_sandman()
+        if time_pass_ms > 18700:
+            self.game_state = self.NUKE_CREDITES
         # TODO: once it is done, change game state to credits
 
     def post_nuke_credits(self):
@@ -509,14 +517,14 @@ class HMGame(object):
         #  random credit generation
 
     def game_over(self):
-        if self.game_state in [-2, 0]:
+        if self.game_state in [self.FIRST_MENU, self.DEFAULT_MENU]:
             ds = random.choice([self.death_sound,
                                 self.death_sound_2,
                                 self.death_sound_3,
                                 self.death_sound_4])
             ds.play()
             self.sky_color.increment(50)
-            if self.game_state == 0:
+            if self.game_state == self.DEFAULT_MENU:
                 self.music_handler.music_stop(1500)
             self.progress['highscore'] = max(self.progress.get('highscore', 0), int(self.score))
             if self.score >= 110:
@@ -547,11 +555,11 @@ class HMGame(object):
                 a.rect.bottomleft = (random.randint(815, 850), 300)
                 a.set_speed(v_x=-1 * random.randint(200, 300))
 
-            elif self.game_state == -1 and len(self.enemy_spawn):
+            elif self.game_state == self.FIRST_GAME and len(self.enemy_spawn):
                 a = Snail(self)
                 a.rect.bottomleft = (810, 300)
                 a.set_speed(v_x=-400)
-            elif self.game_state in [-1, 1]:
+            elif self.game_state in [self.FIRST_GAME, self.DEFAULT_GAME]:
                 a = Snail(self)
                 a.rect.bottomleft = (random.randint(self.enemy_placement_range[0], self.enemy_placement_range[1]), 300)
                 a.set_speed(v_x=-1 * random.randint(self.snail_speed_range[0], self.snail_speed_range[1]))
