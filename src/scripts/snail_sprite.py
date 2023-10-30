@@ -48,7 +48,8 @@ class Snail(pygame.sprite.Sprite):
         self.image = self.anim_frames[int(self.anim_index)]
 
     def update(self):
-        self._movement()
+        if self.game.game_state != 45:
+            self._movement()
         self._animate()
 
     @staticmethod
@@ -125,7 +126,8 @@ class Cham(pygame.sprite.Sprite):
         self.t = (self.t + self.game.delta_time)%2000
 
     def update(self):
-        self._movement()
+        if self.game.game_state != 45:
+            self._movement()
         self._animate()
 
     @staticmethod

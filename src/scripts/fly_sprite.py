@@ -48,7 +48,8 @@ class Fly(pygame.sprite.Sprite):
         self.image = self.anim_frames[int(self.anim_index)]
 
     def update(self):
-        self._movement()
+        if self.game.game_state != 45:
+            self._movement()
         self._animate()
 
     @staticmethod
@@ -115,7 +116,8 @@ class Bat(pygame.sprite.Sprite):
         self.image = self.anim_frames[int(self.anim_index)]
 
     def update(self):
-        self._movement()
+        if self.game.game_state != 45:
+            self._movement()
         self._animate()
 
     @staticmethod

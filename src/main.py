@@ -3,7 +3,8 @@
 #  .
 #  nuke animation with poroshenko
 #  .
-#  - (?) add more patterns for enemies (enter the sand man): frogs (snail) are slower but jump/lunge
+#  - (?) add more patterns for enemies (enter the sand man): frogs (snail) are slower but jump/lunge discard weapon on contact
+#  - swap roblox oof for minecraft one
 #  .
 #  - (?) add enviromental hazards (enter the sand man)
 #  - (?) freeze pickup (розібратись з мікшером, щоб ставити музику на паузу)
@@ -15,9 +16,7 @@
 #  - add tiger mask and kick ability after pacifist run (new wave hookers)
 #  .
 #  - introduce speed limit (so that game wont crush)
-#  enter the sand man: after 110 points
-#  - add jump counter
-#  - add more scorepoints per action if achieved 110 before
+#  add jump counter
 
 import math
 import random
@@ -85,7 +84,7 @@ class MusicHandler:
 
 class HMGame(object):
 
-    # -100 exit; -1 first time; -2 first menu; 0 - menu; 1 default game
+    # -100 exit; -1 first time; -2 first menu; 0 menu; 1 default game; 45 nuke animation
     # 48px = 1 meter
 
     def __new__(cls, *args, **kwargs):
@@ -149,6 +148,7 @@ class HMGame(object):
         self.bg_music.set_volume(0.3)
         self.menu_music.set_volume(0.2)
         self.enter_the_sandman_music.set_volume(0.8)
+        self.nuke_music.set_volume(1.0)
 
         self.enemy_spawn_timer = pygame.USEREVENT + 1
         _mode = 'default'
@@ -201,6 +201,7 @@ class HMGame(object):
         self.bg_music        = pygame.mixer.Sound('src/audio/miami.mp3')
         self.menu_music      = pygame.mixer.Sound('src/audio/menu.mp3')
         self.enter_the_sandman_music = pygame.mixer.Sound('src/audio/enter_the_sandman.mp3')
+        self.nuke_music      = pygame.mixer.Sound('src/audio/nuke.mp3')
 
         self.kill_run_init_sound = pygame.mixer.Sound('src/audio/kill_run_init.mp3')
 
@@ -231,7 +232,7 @@ class HMGame(object):
         self.enemy_group = pygame.sprite.LayeredUpdates()
         self.enemy_attachments = pygame.sprite.LayeredUpdates()
 
-        self.score = 100
+        self.score = 0
 
         self.gunshot_afterimage = []
 
@@ -278,6 +279,8 @@ class HMGame(object):
 
             self.event_loop()
             match self.game_state:
+                case 45:
+                    self.nuke_animation()
                 case 1:
                     self.runtime_frame()
                 case 0:
@@ -379,6 +382,12 @@ class HMGame(object):
         self.difficulty_scaling()
         self.enter_the_sandman()
 
+        if self.score >= 137:
+            self.game_state = 45 # TODO: nuke anim
+            self.music_handler.music_stop(1050)
+            self.animation_time = pygame.time.get_ticks()
+            return
+
         if self.enemy_collision():
             if self.game_state == 1:
                 self.game_state = 0
@@ -390,7 +399,6 @@ class HMGame(object):
         if self.advanced_enemies:
             self.sky_color_foreground.set_alpha(int(self.score)-50)
             self.screen.blit(self.sky_color_foreground, (0, 0))
-
 
     def menu_frame(self, mode='default'):
         if mode == 'default':
@@ -420,6 +428,80 @@ class HMGame(object):
         if mode == 'default':
             inc = self.delta_time * 60 / 1000
             self.sky_color.increment(inc)
+
+    def nuke_animation(self):
+        time_pass_ms = pygame.time.get_ticks() - self.animation_time
+        if time_pass_ms < 2000:
+            a = self.sky_color.settle_for((117, 194, 246), 2, time_pass_ms)
+        else:
+            a = True
+        sky_color = self.sky_color.return_color_absolute()
+        self.sky_color_surf.fill(sky_color)
+        self.screen.blit(self.sky_color_surf, (0, 0))
+        if a is True and self.advanced_enemies: # this will happen only once
+            self.advanced_enemies = False
+            self.sky_color_foreground.fill('White')
+            self.music_handler.music_play(self.nuke_music)
+
+        if a is True:
+            if time_pass_ms > 5700 and time_pass_ms < 15000:
+                radius = -20 + 145 * round(math.log(time_pass_ms/1000 - 4.7, 10.3), 2)
+            elif time_pass_ms >= 13000:
+                radius = 126
+            else:
+                radius = 0
+            pygame.draw.circle(self.screen, 'White', (365, 170), radius)
+
+        self.screen.blit(self.sky_surf, (0, 0))
+
+        score_surf = self.text_to_surface_mf(f'Score: {int(min(self.score, 137))}', True,
+                                             (44 + 200 * bool(self.kill_run or int(self.score) >= 110),
+                                              44 + 200 * bool(not self.kill_run and int(self.score) >= 110),
+                                              44))
+        if time_pass_ms < 2000:
+            score_alpha = 255 - 255 * time_pass_ms // 2000
+            score_surf.set_alpha(score_alpha)
+            score_rect = score_surf.get_rect(center=(400, 80))
+            self.screen.blit(score_surf, score_rect)
+        # TODO: fade away score together with sky color change
+
+        self.player.update()
+        self.player_attachments.update()
+        self.player.draw(self.screen)
+        self.player_attachments.draw(self.screen)
+
+        self.enemy_group.update()
+        self.enemy_group.draw(self.screen)
+
+        self.enemy_attachments.update()
+        self.enemy_attachments.draw(self.screen)
+
+        self.pickups.draw(self.screen)
+
+        # self.draw_laser_sight()
+        # self.draw_shot_after_image()
+        # self.draw_out_of_bounds_marker()
+        # self.draw_tool_tips()
+
+        if time_pass_ms < 850:
+            alpha_ = 127 - 127 * time_pass_ms // 850
+            self.sky_color_foreground.set_alpha(alpha_)
+
+            self.screen.blit(self.sky_color_foreground, (0, -100))
+        if time_pass_ms > 10000:# and time_pass_ms < 18000:
+            alpha_ = 255 * (time_pass_ms - 10000) // 8000
+            self.sky_color_foreground.set_alpha(alpha_)
+            self.screen.blit(self.ground_surf, (0, 300))
+            self.screen.blit(self.sky_color_foreground, (0, 0))
+
+        # self.difficulty_scaling()
+        # self.enter_the_sandman()
+        # TODO: once it is done, change game state to credits
+
+    def post_nuke_credits(self):
+        pass
+        # TODO: anykey will change game state to postnuke menu (different music and no player)
+        #  random credit generation
 
     def game_over(self):
         if self.game_state in [-2, 0]:
@@ -563,7 +645,7 @@ class HMGame(object):
             self.last_rescale_score = int(self.score)
 
     def enter_the_sandman(self):
-        if self.kill_run and int(self.score) >= 110:
+        if not self.advanced_enemies and self.kill_run and int(self.score) >= 110:
             if not self.advanced_enemies:
                 # self.sky_color_surf.set_alpha(0)
                 self.kill_run_init_sound.play()
@@ -587,11 +669,11 @@ class HMGame(object):
             if not self.advanced_enemies:
                 match mode:
                     case 'snail_kill':
-                        self.score += 2.9
-                    case 'fly_kill':
                         self.score += 3.9
+                    case 'fly_kill':
+                        self.score += 4.9
                     case 'pass':
-                        self.score += 1.9
+                        self.score += 2.9
         else:
             match mode:
                 case 'snail_kill':
