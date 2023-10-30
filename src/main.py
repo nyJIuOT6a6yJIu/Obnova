@@ -2,6 +2,7 @@
 #  - pacifist root - unlocks sralker teaser
 #  .
 #  nuke animation with poroshenko
+#  add 'sun' rays
 #  .
 #  - (?) add more patterns for enemies (enter the sand man): frogs (snail) are slower but jump/lunge discard weapon on contact
 #  - swap roblox oof for minecraft one
@@ -163,6 +164,7 @@ class HMGame(object):
 
         self.sky_surf      = pygame.image.load('src/graphics/Sky_miami.png').convert_alpha()
         self.ground_surf   = pygame.image.load('src/graphics/ground.png').convert()
+        self.wojaks        = pygame.image.load('src/graphics/wojaks.png').convert_alpha()
 
         self.player_walk_1 = pygame.image.load('src/graphics/Player/player_walk_1.png').convert_alpha()
         self.player_walk_2 = pygame.image.load('src/graphics/Player/player_walk_2.png').convert_alpha()
@@ -232,7 +234,7 @@ class HMGame(object):
         self.enemy_group = pygame.sprite.LayeredUpdates()
         self.enemy_attachments = pygame.sprite.LayeredUpdates()
 
-        self.score = 0
+        self.score = 131
 
         self.gunshot_afterimage = []
 
@@ -490,8 +492,11 @@ class HMGame(object):
             self.screen.blit(self.sky_color_foreground, (0, -100))
         if time_pass_ms > 10000:# and time_pass_ms < 18000:
             alpha_ = 255 * (time_pass_ms - 10000) // 8000
+            w_alpha_ = 70 * (time_pass_ms - 10000) // 4000
             self.sky_color_foreground.set_alpha(alpha_)
+            self.wojaks.set_alpha(w_alpha_)
             self.screen.blit(self.ground_surf, (0, 300))
+            self.screen.blit(self.wojaks, (0, 0))
             self.screen.blit(self.sky_color_foreground, (0, 0))
 
         # self.difficulty_scaling()
