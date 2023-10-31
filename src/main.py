@@ -1,11 +1,10 @@
 # TODO:
 #  - pacifist root - unlocks sralker teaser
 #  .
-#  nuke animation with poroshenko
+#  - nuke animation with poroshenko (pacifist ending)
 #  add post nuke credits
 #  .
-#  - (?) add more patterns for enemies (enter the sand man): frogs (snail) are slower but jump/lunge discard weapon on contact
-#  - swap roblox oof for minecraft one
+#  - (?) add more patterns for enemies (enter the sand man): frogs (snail) are slower but jump/lunge discard weapon on contact)
 #  .
 #  - (?) add enviromental hazards (enter the sand man)
 #  - (?) freeze pickup (розібратись з мікшером, щоб ставити музику на паузу)
@@ -15,7 +14,6 @@
 #  - add tiger mask and kick/throw ability after pacifist run (new wave hookers)
 #  .
 #  - introduce speed limit (so that game wont crush)
-#  add jump counter
 
 import math
 import random
@@ -96,7 +94,7 @@ class HMGame(object):
         self.DEFAULT_GAME = 1
         self.DEFAULT_MENU = 0
         self.NUKE_START = 45
-        self.NUKE_CREDITES = 46
+        self.NUKE_CREDITS = 46
         self.NUKE_MENU = -46
 
         if progress is None:
@@ -148,19 +146,20 @@ class HMGame(object):
         self.kill_run_init_sound.set_volume(1.5)
         self.death_sound.set_volume(1.3)
         self.death_sound_2.set_volume(1.3)
-        self.death_sound_3.set_volume(5)
+        self.death_sound_3.set_volume(6)
         self.death_sound_4.set_volume(1.3)
 
         self.bg_music.set_volume(0.3)
         self.menu_music.set_volume(0.2)
         self.enter_the_sandman_music.set_volume(0.8)
         self.nuke_music.set_volume(1.0)
+        self.post_nuke_music.set_volume(0.6)
 
         self.enemy_spawn_timer = pygame.USEREVENT + 1
         _mode = 'default'
         if not self.progress:
             _mode = 'first'
-        self.set_up_game(_mode)  # TODO: cache check
+        self.set_up_game(_mode)  # TODO: cache check for another unlocks
         return self.game_loop()
 
     def load_images(self):
@@ -180,6 +179,8 @@ class HMGame(object):
         self.rooster_mask  = pygame.image.load('src/graphics/Player/rooster.png').convert_alpha()
         self.weapon        = pygame.image.load('src/graphics/GUN.png').convert_alpha()
         self.ammo          = pygame.transform.scale(pygame.image.load('src/graphics/ammo.png').convert_alpha(), (50, 50))
+        self.jump_on       = pygame.transform.scale(pygame.image.load('src/graphics/jump_on.png').convert_alpha(), (50, 50))
+        self.jump_off      = pygame.transform.scale(pygame.image.load('src/graphics/jump_off.png').convert_alpha(), (50, 50))
 
         self.fly_1         = pygame.image.load('src/graphics/fly/Fly1.png').convert_alpha()
         self.fly_2         = pygame.image.load('src/graphics/fly/Fly2.png').convert_alpha()
@@ -209,6 +210,7 @@ class HMGame(object):
         self.menu_music      = pygame.mixer.Sound('src/audio/menu.mp3')
         self.enter_the_sandman_music = pygame.mixer.Sound('src/audio/enter_the_sandman.mp3')
         self.nuke_music      = pygame.mixer.Sound('src/audio/nuke.mp3')
+        self.post_nuke_music = pygame.mixer.Sound('src/audio/post_nuke_menu.mp3')
 
         self.kill_run_init_sound = pygame.mixer.Sound('src/audio/kill_run_init.mp3')
 
@@ -239,7 +241,7 @@ class HMGame(object):
         self.enemy_group = pygame.sprite.LayeredUpdates()
         self.enemy_attachments = pygame.sprite.LayeredUpdates()
 
-        self.score = 0
+        self.score = 136
 
         self.gunshot_afterimage = []
 
@@ -288,6 +290,10 @@ class HMGame(object):
             match self.game_state:
                 case self.NUKE_START:
                     self.nuke_animation()
+                case self.NUKE_CREDITS:
+                    self.post_nuke_credits()
+                case self.NUKE_MENU:
+                    self.menu_frame_nuke()
                 case self.DEFAULT_GAME:
                     self.runtime_frame()
                 case self.DEFAULT_MENU:
@@ -295,7 +301,7 @@ class HMGame(object):
                 case self.FIRST_GAME:
                     self.runtime_frame('first')
                 case self.FIRST_MENU:
-                    self.menu_frame('first')
+                    self.menu_frame_first()
             if self.game_state != self.EXIT:
                 pygame.display.update()
                 self.clock.tick(60)
@@ -336,12 +342,17 @@ class HMGame(object):
                             self.add_new_enemy(3, 1)
                         pygame.time.set_timer(self.enemy_spawn_timer, self.enemy_spawn_interval, 1)
 
-
-
-
-            if self.game_state in [self.FIRST_MENU, self.DEFAULT_MENU] \
+            elif self.game_state in [self.FIRST_MENU, self.DEFAULT_MENU] \
                     and event.type == pygame.KEYDOWN and event.key == pygame.K_y:
                 self.set_up_game()
+
+            elif self.game_state == self.NUKE_CREDITS and (event.type == pygame.KEYDOWN or event.type == pygame.MOUSEBUTTONDOWN):
+                self.game_state = self.NUKE_MENU
+                self.sky_color = ColorSine(phases=[0.0, math.pi * 0.4, math.pi * 0.5],
+                                           freqs=[0.1, 0.6, 0.7],
+                                           statics=[0.8, 0.6, 0.4],
+                                           ampls=[0.1, 0.3, 0.4])
+                self.music_handler.music_play(self.post_nuke_music)
 
     def runtime_frame(self, mode='default'):
         sky_color = self.sky_color.return_color()
@@ -386,6 +397,7 @@ class HMGame(object):
         self.draw_out_of_bounds_marker()
         self.draw_tool_tips()
         self.draw_ammo_count()
+        self.draw_jumps_count()
 
         self.difficulty_scaling()
         self.enter_the_sandman()
@@ -408,14 +420,11 @@ class HMGame(object):
             self.sky_color_foreground.set_alpha(int(self.score)-50)
             self.screen.blit(self.sky_color_foreground, (0, 0))
 
-    def menu_frame(self, mode='default'):
-        if mode == 'default':
-            self.screen.fill(self.sky_color.return_color())
-        elif mode == 'first':
-            self.screen.fill((125, 130, 230))
+    def menu_frame(self):
+        self.screen.fill(self.sky_color.return_color())
+
         self.screen.blit(self.player_menu, self.player_menu_rect)
-        if mode == 'default':
-            self.screen.blit(self.wasted_surf, self.wasted_rect)
+        self.screen.blit(self.wasted_surf, self.wasted_rect)
 
         score_line = f'Your score is {int(self.score)}'
         new_game_line = 'Press Y to continue'
@@ -433,9 +442,46 @@ class HMGame(object):
         self.screen.blit(new_game_surf, new_game_rect)
         self.screen.blit(self.game_name_surf, (200, 40))
 
-        if mode == 'default':
-            inc = self.delta_time * 60 / 1000
-            self.sky_color.increment(inc)
+        inc = self.delta_time * 60 / 1000
+        self.sky_color.increment(inc)
+
+    def menu_frame_first(self):
+        self.screen.fill((125, 130, 230))
+        self.screen.blit(self.player_menu, self.player_menu_rect)
+
+        score_line = f'Your score is {int(self.score)}'
+        new_game_line = 'Press Y to continue'
+        if int(self.score) == 0:
+            score_line = ''
+            new_game_line = 'Press Y key to start'
+
+        elif int(self.score) >= 110 and int(self.score) < 137:
+            new_game_line = 'Pacan k uspehoo shol (Y)'
+
+        final_score_surf = self.text_to_surface_mf(score_line, True, 'Red')
+        final_score_rect = final_score_surf.get_rect(center=(400, 200))
+        new_game_surf = self.text_to_surface_mf(new_game_line, True, 'Red')
+        new_game_rect = new_game_surf.get_rect(midleft=(400, 250))
+        self.screen.blit(final_score_surf, final_score_rect)
+        self.screen.blit(new_game_surf, new_game_rect)
+        self.screen.blit(self.game_name_surf, (200, 40))
+
+    def menu_frame_nuke(self):
+        self.screen.fill(self.sky_color.return_color())
+
+        score_line = f'Your score is {int(self.score)}'
+        new_game_line = 'Press Y to start again'
+
+        final_score_surf = self.text_to_surface_mf(score_line, True, 'Red')
+        final_score_rect = final_score_surf.get_rect(center=(400, 200))
+        new_game_surf = self.text_to_surface_mf(new_game_line, True, 'Red')
+        new_game_rect = new_game_surf.get_rect(midleft=(400, 250))
+        self.screen.blit(final_score_surf, final_score_rect)
+        self.screen.blit(new_game_surf, new_game_rect)
+        self.screen.blit(self.game_name_surf, (200, 40))
+
+        inc = self.delta_time * 60 / 2000
+        self.sky_color.increment(inc)
 
     def nuke_animation(self):
         time_pass_ms = pygame.time.get_ticks() - self.animation_time
@@ -446,20 +492,19 @@ class HMGame(object):
         sky_color = self.sky_color.return_color_absolute()
         self.sky_color_surf.fill(sky_color)
         self.screen.blit(self.sky_color_surf, (0, 0))
+
         if a is True and self.advanced_enemies: # this will happen only once
             self.advanced_enemies = False
             self.sky_color_foreground.fill('White')
             self.music_handler.music_play(self.nuke_music)
 
         if a is True:
-            if time_pass_ms > 5700 and time_pass_ms < 15000:
+            if time_pass_ms > 5700:
                 radius = -20 + 145 * round(math.log(time_pass_ms/1000 - 4.7, 10.3), 2)
-            elif time_pass_ms >= 13000:
-                radius = 126
             else:
                 radius = 0
-            pygame.draw.circle(self.screen, 'White', (365, 170), radius)
-
+            pygame.draw.circle(self.screen, 'White', (365, 170), radius, draw_top_right=True, draw_top_left=True, draw_bottom_left=True)
+            self.screen.blit(self.ground_surf, (0, 300))
         self.screen.blit(self.sky_surf, (0, 0))
 
         score_surf = self.text_to_surface_mf(f'Score: {int(min(self.score, 137))}', True,
@@ -471,7 +516,6 @@ class HMGame(object):
             score_surf.set_alpha(score_alpha)
             score_rect = score_surf.get_rect(center=(400, 80))
             self.screen.blit(score_surf, score_rect)
-        # TODO: fade away score together with sky color change
 
         self.player.update()
         self.player_attachments.update()
@@ -485,11 +529,6 @@ class HMGame(object):
         self.enemy_attachments.draw(self.screen)
 
         self.pickups.draw(self.screen)
-
-        # self.draw_laser_sight()
-        # self.draw_shot_after_image()
-        # self.draw_out_of_bounds_marker()
-        # self.draw_tool_tips()
 
         if time_pass_ms < 850:
             alpha_ = 127 - 127 * time_pass_ms // 850
@@ -505,14 +544,45 @@ class HMGame(object):
             self.screen.blit(self.wojaks, (0, 0))
             self.screen.blit(self.sky_color_foreground, (0, 0))
 
-        # self.difficulty_scaling()
-        # self.enter_the_sandman()
         if time_pass_ms > 18700:
-            self.game_state = self.NUKE_CREDITES
+            self.game_state = self.NUKE_CREDITS
+            self.advanced_enemies = True
+            self.sky_color = ColorSine(phases=[0.0, 0.0, 0.0],
+                                       freqs=[0.0, 0.0, 0.0],
+                                       statics=[1.0, 1.0, 1.0],
+                                       ampls=[0.0, 0.0, 0.0])
+            self.animation_time = pygame.time.get_ticks()
         # TODO: once it is done, change game state to credits
 
     def post_nuke_credits(self):
-        pass
+        time_pass_ms = pygame.time.get_ticks() - self.animation_time
+        a = False
+        if time_pass_ms < 4000:
+            self.sky_color.settle_for((238, 95, 17), 4, time_pass_ms) # 230, 177, 0
+        elif time_pass_ms < 5000: # TODO: fix
+            self.sky_color.settle_for((230, 177, 0), 1, time_pass_ms - 4000)
+        else:
+            a = True
+
+
+        if a and self.advanced_enemies:
+            self.advanced_enemies = False
+            self.sky_color = ColorSine(phases=[0.0, math.pi * 0.4, math.pi * 0.5],
+                                       freqs=[0.1, 0.6, 0.7],
+                                       statics=[0.8, 0.6, 0.3],
+                                       ampls=[0.1, 0.3, 0.5])
+
+        if not a:
+            self.screen.fill(self.sky_color.return_color_absolute())
+        if a:
+            self.screen.fill(self.sky_color.return_color())
+            inc = self.delta_time * 60 / 2000
+            self.sky_color.increment(inc)
+
+        if time_pass_ms > 230300:
+            self.game_state = self.NUKE_MENU
+            self.sky_color.red, self.sky_color.green, self.sky_color.blue = 0, 0, 0
+            self.music_handler.music_play(self.post_nuke_music)
         # TODO: anykey will change game state to postnuke menu (different music and no player)
         #  random credit generation
 
@@ -639,6 +709,16 @@ class HMGame(object):
             ammo_count_surf = self.text_to_surface_mf(ammo, True, color, size=55)
             self.screen.blit(ammo_count_surf, (685, 345))
             self.screen.blit(self.ammo, (715, 335))
+
+    def draw_jumps_count(self):
+        if not self.kill_run:
+            return None
+        for i in range(self.player_sprite.max_jumps):
+            if i < self.player_sprite.jumps:
+                _image = self.jump_on
+            else:
+                _image = self.jump_off
+            self.screen.blit(_image, (20 + i*55, 330))
 
     def difficulty_scaling(self):
         if self.kill_run and int(self.score) != self.last_rescale_score:

@@ -37,7 +37,7 @@ class ColorSine:
         if self.freqs[2]:
             self.blue = round((self.blue + inc) % (360 / self.freqs[2]), 3)
 
-    def settle_for(self, target_color, seconds, time_pass_ms):
+    def settle_for(self, target_color, seconds, time_pass_ms): # TODO: fix for consecutive usage
         if self.starting_color is None:
             self.starting_color = self.return_color()
             # self.ms_pass = 0
