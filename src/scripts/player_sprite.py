@@ -1,4 +1,5 @@
 import math
+import random
 
 import pygame
 
@@ -131,18 +132,43 @@ class Player(pygame.sprite.Sprite):
 
 
 class Mask(pygame.sprite.Sprite):
-    def __init__(self, _player: Player):
+    def __init__(self, _player: Player, mask='rooster'):
         super().__init__()
-        self.image = pygame.transform.scale(_player.game.rooster_mask, (90, 95))
+
+        self.deflect = False
+        # self.dash
+        # self.punch
+
+        if mask == 'rooster':
+            self.image = pygame.transform.scale(_player.game.rooster_mask, (90, 95))
+        elif mask == 'bear':
+            self.deflect = True
+            self.image = pygame.transform.scale(_player.game.bear_mask, (90, 80))
+        else:
+            self.image = pygame.surface.Surface((90, 95))
+            self.image.set_alpha(0)
+
+        self._type = mask
         self.rect = self.image.get_rect()
         self.body = _player
 
+    def deflect_ability(self):
+        for sprite in self.body.game.enemy_group:
+            sprite.kill()
+        for sprite in self.body.game.enemy_attachments:
+            sprite.kill()
+        ds = random.choice([self.body.game.death_sound,
+                            self.body.game.death_sound_2,
+                            self.body.game.death_sound_3,
+                            self.body.game.death_sound_4])
+        ds.play()
+
     def update(self):
-        if self.body.mask:
-            self.image.set_alpha(255)
-        else:
-            self.image.set_alpha(0)
-        self.rect.center = (self.body.rect.midtop[0] + 7, self.body.rect.midtop[1] + 23)
+        match self._type:
+            case 'rooster':
+                self.rect.center = (self.body.rect.midtop[0] + 7, self.body.rect.midtop[1] + 23)
+            case 'bear':
+                self.rect.center = (self.body.rect.midtop[0], self.body.rect.midtop[1] + 23)
 
 
 class Weapon(pygame.sprite.Sprite):

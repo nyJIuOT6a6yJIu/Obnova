@@ -18,10 +18,10 @@ class Snail(pygame.sprite.Sprite):
         self.center = [0.0, 0.0]
         self.speed = [0, 0]
 
-        if self.game.game_state == self.game.DEFAULT_GAME:
-            self.mask_bool = True
-        elif self.game.game_state == self.game.FIRST_GAME:
+        if self.game.game_state == self.game.FIRST_GAME:
             self.mask_bool = False
+        else:
+            self.mask_bool = True
         self.mask = DogMask(self)
         self.game.enemy_attachments.add(self.mask)
 
@@ -92,10 +92,11 @@ class Cham(pygame.sprite.Sprite):
         self._alpha = 170 - self.game.score
         self.t = 500
 
-        if self.game.game_state == self.game.DEFAULT_GAME:
-            self.mask_bool = True
-        elif self.game.game_state == self.game.FIRST_GAME:
+        if self.game.game_state == self.game.FIRST_GAME:
             self.mask_bool = False
+        else:
+            self.mask_bool = True
+
         self.mask = ChamMask(self)
         self.game.enemy_attachments.add(self.mask)
 

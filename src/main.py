@@ -1,5 +1,4 @@
 # TODO:
-#  - pacifist root - unlocks sralker teaser
 #  .
 #  - nuke animation with poroshenko (pacifist ending)
 #  add post nuke credits
@@ -9,9 +8,12 @@
 #  - (?) add enviromental hazards (enter the sand man)
 #  - (?) freeze pickup (розібратись з мікшером, щоб ставити музику на паузу)
 #  .
-#  - add "block 1 hit, then kill everyone" probably-pig mask (after 49 deaths) (music??? maybe way home)
+#  - add "block 1 hit, then kill everyone" bear mask draw deflect icon
 #  - add zebra mask and dodge ability after nuke ending (fun&games)
 #  - add tiger mask and kick/throw ability after pacifist run (new wave hookers)
+#  - add white-black bad apple after tiger run
+#  - add frog mask (all masks effects, but only on Wednesdays)
+#  - add sralker after bad apple run
 #  .
 #  - introduce speed limit (so that game wont crush)
 
@@ -21,6 +23,8 @@ import random
 import pygame
 
 from src.scripts.color_sine import ColorSine
+from src.scripts.abs_color import ColorAbs
+
 from src.scripts.player_sprite import Player, Mask, Weapon
 from src.scripts.fly_sprite import Fly, Bat
 from src.scripts.snail_sprite import Snail, Cham
@@ -79,6 +83,7 @@ class MusicHandler:
     #         pygame.mixer_music.pause()
     #         self.IsPaused = True
 
+
 class HMGame(object):
     # 48px = 1 meter
 
@@ -88,14 +93,15 @@ class HMGame(object):
         return cls.instance
 
     def __init__(self, progress=None):
-        self.EXIT = -100
-        self.FIRST_GAME = -1
-        self.FIRST_MENU = -2
+        self.EXIT         = -100
+        self.FIRST_GAME   = -1
+        self.FIRST_MENU   = -2
         self.DEFAULT_GAME = 1
+        self.BEAR_GAME     = 2
         self.DEFAULT_MENU = 0
-        self.NUKE_START = 45
+        self.NUKE_START   = 45
         self.NUKE_CREDITS = 46
-        self.NUKE_MENU = -46
+        self.NUKE_MENU    = -46
 
         if progress is None:
             progress = dict()
@@ -111,6 +117,8 @@ class HMGame(object):
 
         pygame.display.set_caption(DISPLAY_CAPTION)
         pygame.display.set_icon(self.rooster_mask)
+
+        self.nuke_menu_palms.set_alpha(70)
 
         # self.start_time = 0
         self.mouse = pygame.sprite.Sprite()
@@ -149,72 +157,84 @@ class HMGame(object):
         self.death_sound_3.set_volume(6)
         self.death_sound_4.set_volume(1.3)
 
-        self.bg_music.set_volume(0.3)
+        self.run_music_1.set_volume(0.3)
+        self.bear_music.set_volume(0.4)
         self.menu_music.set_volume(0.2)
         self.enter_the_sandman_music.set_volume(0.8)
         self.nuke_music.set_volume(1.0)
         self.post_nuke_music.set_volume(0.6)
 
         self.enemy_spawn_timer = pygame.USEREVENT + 1
-        _mode = 'default'
+
+        self.score = -1
+        self.delta_time = 1
+
         if not self.progress:
-            _mode = 'first'
-        self.set_up_game(_mode)  # TODO: cache check for another unlocks
+            self.set_up_game('first')
+        else:
+            self.game_state = self.DEFAULT_MENU
+            self.music_handler.music_play(self.menu_music)
         return self.game_loop()
 
     def load_images(self):
 
         self.normal_sky_surf = pygame.image.load('src/graphics/Sky.png').convert_alpha()
 
-        self.sky_surf      = pygame.image.load('src/graphics/Sky_miami.png').convert_alpha()
-        self.ground_surf   = pygame.image.load('src/graphics/ground.png').convert()
-        self.wojaks        = pygame.image.load('src/graphics/wojaks.png').convert_alpha()
+        self.sky_surf        = pygame.image.load('src/graphics/Sky_miami.png').convert_alpha()
+        self.ground_surf     = pygame.image.load('src/graphics/ground.png').convert()
+        self.wojaks          = pygame.image.load('src/graphics/wojaks.png').convert_alpha()
+        self.nuke_menu_palms = pygame.image.load('src/graphics/palms_bg.png').convert_alpha()
 
         self.player_walk_1 = pygame.image.load('src/graphics/Player/player_walk_1.png').convert_alpha()
         self.player_walk_2 = pygame.image.load('src/graphics/Player/player_walk_2.png').convert_alpha()
         self.player_jump   = pygame.image.load('src/graphics/Player/jump.png').convert_alpha()
 
-        self.player_stand  = pygame.image.load('src/graphics/Player/player_stand.png').convert_alpha()
+        self.player_stand = pygame.image.load('src/graphics/Player/player_stand.png').convert_alpha()
 
-        self.rooster_mask  = pygame.image.load('src/graphics/Player/rooster.png').convert_alpha()
-        self.weapon        = pygame.image.load('src/graphics/GUN.png').convert_alpha()
-        self.ammo          = pygame.transform.scale(pygame.image.load('src/graphics/ammo.png').convert_alpha(), (50, 50))
-        self.jump_on       = pygame.transform.scale(pygame.image.load('src/graphics/jump_on.png').convert_alpha(), (50, 50))
-        self.jump_off      = pygame.transform.scale(pygame.image.load('src/graphics/jump_off.png').convert_alpha(), (50, 50))
+        self.rooster_mask = pygame.image.load('src/graphics/Player/rooster.png').convert_alpha()
+        self.bear_mask     = pygame.image.load('src/graphics/Player/bear.png').convert_alpha()
 
-        self.fly_1         = pygame.image.load('src/graphics/fly/Fly1.png').convert_alpha()
-        self.fly_2         = pygame.image.load('src/graphics/fly/Fly2.png').convert_alpha()
-        self.fly_mask      = pygame.image.load('src/graphics/fly/owl.png').convert_alpha()
-        self.bat_mask      = pygame.image.load('src/graphics/fly/bat.png').convert_alpha()
+        self.weapon   = pygame.image.load('src/graphics/GUN.png').convert_alpha()
+        self.ammo     = pygame.transform.scale(pygame.image.load('src/graphics/ammo.png').convert_alpha(), (50, 50))
+        self.jump_on  = pygame.transform.scale(pygame.image.load('src/graphics/jump_on.png').convert_alpha(), (50, 50))
+        self.jump_off = pygame.transform.scale(pygame.image.load('src/graphics/jump_off.png').convert_alpha(), (50, 50))
 
-        self.snail_1       = pygame.image.load('src/graphics/snail/snail1.png').convert_alpha()
-        self.snail_2       = pygame.image.load('src/graphics/snail/snail2.png').convert_alpha()
-        self.snail_mask    = pygame.image.load('src/graphics/snail/dog.png').convert_alpha()
-        self.cham_1        = pygame.image.load('src/graphics/snail/cham1.png').convert_alpha()
-        self.cham_2        = pygame.image.load('src/graphics/snail/cham2.png').convert_alpha()
-        self.cham_mask     = pygame.image.load('src/graphics/snail/cham.png').convert_alpha()
+        self.fly_1    = pygame.image.load('src/graphics/fly/Fly1.png').convert_alpha()
+        self.fly_2    = pygame.image.load('src/graphics/fly/Fly2.png').convert_alpha()
+        self.fly_mask = pygame.image.load('src/graphics/fly/owl.png').convert_alpha()
+        self.bat_mask = pygame.image.load('src/graphics/fly/bat.png').convert_alpha()
 
-        self.oob_pointer   = pygame.image.load('src/graphics/oob_pointer.png').convert_alpha()
+        self.snail_1    = pygame.image.load('src/graphics/snail/snail1.png').convert_alpha()
+        self.snail_2    = pygame.image.load('src/graphics/snail/snail2.png').convert_alpha()
+        self.snail_mask = pygame.image.load('src/graphics/snail/dog.png').convert_alpha()
+        self.cham_1     = pygame.image.load('src/graphics/snail/cham1.png').convert_alpha()
+        self.cham_2     = pygame.image.load('src/graphics/snail/cham2.png').convert_alpha()
+        self.cham_mask  = pygame.image.load('src/graphics/snail/cham.png').convert_alpha()
+
+        self.oob_pointer = pygame.image.load('src/graphics/oob_pointer.png').convert_alpha()
 
     def load_sounds(self):
-        self.gun_sound       = pygame.mixer.Sound('src/audio/gunshot.mp3')
-        self.empty_gun_sound = pygame.mixer.Sound('src/audio/empty_gun.mp3')
-        self.gun_pickup_sound= pygame.mixer.Sound('src/audio/gun_pickup.mp3')
+        self.death_sound     = pygame.mixer.Sound('src/audio/death sounds/death.mp3')
+        self.death_sound_2   = pygame.mixer.Sound('src/audio/death sounds/death2.mp3')
+        self.death_sound_3   = pygame.mixer.Sound('src/audio/death sounds/death3.mp3')
+        self.death_sound_4   = pygame.mixer.Sound('src/audio/death sounds/death4.mp3')
 
-        self.death_sound     = pygame.mixer.Sound('src/audio/death.mp3')
-        self.death_sound_2   = pygame.mixer.Sound('src/audio/death2.mp3')
-        self.death_sound_3   = pygame.mixer.Sound('src/audio/death3.mp3')
-        self.death_sound_4   = pygame.mixer.Sound('src/audio/death4.mp3')
+        self.menu_music      = pygame.mixer.Sound('src/audio/menu music/menu.mp3')
+        self.post_nuke_music = pygame.mixer.Sound('src/audio/menu music/post_nuke_menu.mp3')
 
-        self.bg_music        = pygame.mixer.Sound('src/audio/miami.mp3')
-        self.menu_music      = pygame.mixer.Sound('src/audio/menu.mp3')
-        self.enter_the_sandman_music = pygame.mixer.Sound('src/audio/enter_the_sandman.mp3')
-        self.nuke_music      = pygame.mixer.Sound('src/audio/nuke.mp3')
-        self.post_nuke_music = pygame.mixer.Sound('src/audio/post_nuke_menu.mp3')
+        self.run_music_1 = pygame.mixer.Sound('src/audio/run music/run_music1.mp3')
+        self.bear_music   = pygame.mixer.Sound('src/audio/run music/bear_run_music.mp3')
 
-        self.kill_run_init_sound = pygame.mixer.Sound('src/audio/kill_run_init.mp3')
+        self.enter_the_sandman_music = pygame.mixer.Sound('src/audio/boss music/enter_the_sandman.mp3')
 
-    def set_up_game(self, mode='default'):
+        self.nuke_music      = pygame.mixer.Sound('src/audio/misc music/nuke.mp3')
+
+        self.gun_sound           = pygame.mixer.Sound('src/audio/misc sounds/gunshot.mp3')
+        self.empty_gun_sound     = pygame.mixer.Sound('src/audio/misc sounds/empty_gun.mp3')
+        self.gun_pickup_sound    = pygame.mixer.Sound('src/audio/misc sounds/gun_pickup.mp3')
+        self.kill_run_init_sound = pygame.mixer.Sound('src/audio/misc sounds/kill_run_init.mp3')
+
+    def set_up_game(self, mode='rooster'):
         self.max_ammo = MAX_AMMO_CAPACITY
         self.pickup_rate = PICKUP_DROP_RATE  # percentage chance
         self.pickups = pygame.sprite.LayeredUpdates()
@@ -225,27 +245,27 @@ class HMGame(object):
 
         self.player_attachments = pygame.sprite.LayeredUpdates()
 
-        self.mask_sprite = Mask(self.player_sprite)
+        self.mask_sprite = Mask(self.player_sprite, mode)
         self.player_attachments.add(self.mask_sprite)
 
-        if mode == 'default':
-            self.enemy_spawn = []
-            self.player_sprite.pick_up_weapon(Weapon(self))
         if mode == 'first':
             self.enemy_spawn = [None, None, 'snail', 'snail', 'fly', 'snail', None]
             self.player_sprite.set_attachments(False)
 
-        # player_attachments.change_layer(mask_sprite, 0)
+        else:#if mode == 'rooster':
+            self.enemy_spawn = []
+            self.player_sprite.pick_up_weapon(Weapon(self))
 
+        # player_attachments.change_layer(mask_sprite, 0)
 
         self.enemy_group = pygame.sprite.LayeredUpdates()
         self.enemy_attachments = pygame.sprite.LayeredUpdates()
 
-        self.score = 136
+        self.score = 130
 
         self.gunshot_afterimage = []
 
-        if mode == 'default':
+        if mode in ['rooster', 'bear']:
             self.jump_tip = self.text_to_surface_mf('SPACE/W to Jump', True, '#5d5d5d', size=32)
             self.move_tip = self.text_to_surface_mf('A/D to Move', True, '#5d5d5d', size=32)
             self.shoot_tup = self.text_to_surface_mf('LMB to Shoot', True, '#5d5d5d', size=32)
@@ -272,20 +292,22 @@ class HMGame(object):
         self.snail_speed_range = SNAIL_SPEED_RANGE
         self.fly_speed_range =  FLY_SPEED_RANGE
 
-        self.game_state = {'first': self.FIRST_GAME, 'default': self.DEFAULT_GAME}[mode]
+        self.game_state = {'first': self.FIRST_GAME, 'rooster': self.DEFAULT_GAME, 'bear': self.BEAR_GAME}[mode]
         self.advanced_enemies = False
         self.sky_color_surf.set_alpha(255)
         self.sky_color_foreground.set_alpha(0)
         self.kill_run = False
+
         if mode == 'first':
             self.music_handler.music_play(self.menu_music)
-        elif mode == 'default':
-            self.music_handler.music_play(self.bg_music)
+        elif mode == 'rooster':
+            self.music_handler.music_play(self.run_music_1)
+        elif mode == 'bear':
+            self.music_handler.music_play(self.bear_music)
 
     def game_loop(self):
         while self.game_state != self.EXIT:
             self.last_time_frame = pygame.time.get_ticks()
-
             self.event_loop()
             match self.game_state:
                 case self.NUKE_START:
@@ -294,7 +316,7 @@ class HMGame(object):
                     self.post_nuke_credits()
                 case self.NUKE_MENU:
                     self.menu_frame_nuke()
-                case self.DEFAULT_GAME:
+                case self.DEFAULT_GAME | self.BEAR_GAME:
                     self.runtime_frame()
                 case self.DEFAULT_MENU:
                     self.menu_frame()
@@ -314,7 +336,7 @@ class HMGame(object):
                 pygame.quit()
                 self.game_state = self.EXIT
                 # exit()
-            if self.game_state == self.FIRST_GAME or self.game_state == self.DEFAULT_GAME:
+            if self.game_state in [self.FIRST_GAME, self.DEFAULT_GAME, self.BEAR_GAME]:
                 # players controls
 
                 if event.type == pygame.KEYDOWN:
@@ -328,7 +350,7 @@ class HMGame(object):
 
                 # enemy spawn
                 if event.type == self.enemy_spawn_timer:
-                    if self.game_state == self.DEFAULT_GAME:
+                    if self.game_state in [self.DEFAULT_GAME, self.BEAR_GAME]:
                         self.add_new_enemy(3, 1)
                         pygame.time.set_timer(self.enemy_spawn_timer, self.enemy_spawn_interval, 1)
                     elif self.game_state == self.FIRST_GAME:
@@ -342,19 +364,27 @@ class HMGame(object):
                             self.add_new_enemy(3, 1)
                         pygame.time.set_timer(self.enemy_spawn_timer, self.enemy_spawn_interval, 1)
 
-            elif self.game_state in [self.FIRST_MENU, self.DEFAULT_MENU] \
-                    and event.type == pygame.KEYDOWN and event.key == pygame.K_y:
-                self.set_up_game()
+            elif self.game_state in [self.FIRST_MENU, self.DEFAULT_MENU, self.NUKE_MENU] \
+                    and event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_y:
+                    self.set_up_game()
+                elif self.progress.get('bear', False) and event.key == pygame.K_b:
+                    self.set_up_game('bear')
 
             elif self.game_state == self.NUKE_CREDITS and (event.type == pygame.KEYDOWN or event.type == pygame.MOUSEBUTTONDOWN):
                 self.game_state = self.NUKE_MENU
+                _color = self.sky_color.return_color()
+                _color = (pygame.math.clamp(_color[0], 179, 229),
+                          pygame.math.clamp(_color[1], 77, 229),
+                          pygame.math.clamp(_color[2], 0, 204))
                 self.sky_color = ColorSine(phases=[0.0, math.pi * 0.4, math.pi * 0.5],
                                            freqs=[0.1, 0.6, 0.7],
                                            statics=[0.8, 0.6, 0.4],
                                            ampls=[0.1, 0.3, 0.4])
+                self.sky_color.convert_from_abs(_color)
                 self.music_handler.music_play(self.post_nuke_music)
 
-    def runtime_frame(self, mode='default'):
+    def runtime_frame(self, mode='rooster'):
         sky_color = self.sky_color.return_color()
         inc = self.delta_time * 60 / 1000
         if not self.advanced_enemies:
@@ -365,12 +395,12 @@ class HMGame(object):
         self.sky_color.increment(inc)
         self.screen.blit(self.ground_surf, (0, 300))
 
-        if mode == 'default':
+        if mode == 'first':
+            self.screen.blit(self.normal_sky_surf, (0, 0))
+        else: #if mode == 'rooster':
             if not self.advanced_enemies:
                 self.screen.blit(self.sky_color_surf, (0, 0))  # TODO: щось тут спичиняє фрізи
             self.screen.blit(self.sky_surf, (0, 0))
-        elif mode == 'first':
-            self.screen.blit(self.normal_sky_surf, (0, 0))
 
         score_surf = self.text_to_surface_mf(f'Score: {int(min(self.score, 137))}', True, (44+200*bool(self.kill_run or int(self.score) >= 110),
                                                                                       44+200*bool(not self.kill_run and int(self.score) >= 110),
@@ -405,14 +435,21 @@ class HMGame(object):
         if self.score >= 137:
             self.game_state = self.NUKE_START
             self.music_handler.music_stop(1050)
+            _color = self.sky_color.return_color()
+            self.sky_color = ColorAbs(_color)
             self.animation_time = pygame.time.get_ticks()
+
             return
 
         if self.enemy_collision():
-            if self.game_state == self.DEFAULT_GAME:
-                self.game_state = self.DEFAULT_MENU
-            elif self.game_state == self.FIRST_GAME:
-                self.game_state = self.FIRST_MENU
+            if self.mask_sprite.deflect:
+                self.mask_sprite.deflect = False
+                self.mask_sprite.deflect_ability()
+            else:
+                if self.game_state in [self.DEFAULT_GAME, self.BEAR_GAME]:
+                    self.game_state = self.DEFAULT_MENU
+                elif self.game_state == self.FIRST_GAME:
+                    self.game_state = self.FIRST_MENU
         self.game_over()
 
         # # TODO: bg will be colored and sky will be trippy
@@ -428,7 +465,7 @@ class HMGame(object):
 
         score_line = f'Your score is {int(self.score)}'
         new_game_line = 'Press Y to continue'
-        if int(self.score) == 0:
+        if int(self.score) <= 0:
             score_line = ''
             new_game_line = 'Press Y key to start'
         elif int(self.score) >= 110 and int(self.score) < 137:
@@ -450,7 +487,7 @@ class HMGame(object):
         self.screen.blit(self.player_menu, self.player_menu_rect)
 
         score_line = f'Your score is {int(self.score)}'
-        new_game_line = 'Press Y to continue'
+        new_game_line = 'Press Y to kill the bastards'
         if int(self.score) == 0:
             score_line = ''
             new_game_line = 'Press Y key to start'
@@ -468,15 +505,12 @@ class HMGame(object):
 
     def menu_frame_nuke(self):
         self.screen.fill(self.sky_color.return_color())
+        self.screen.blit(self.nuke_menu_palms, (0, 0))
 
-        score_line = f'Your score is {int(self.score)}'
         new_game_line = 'Press Y to start again'
-
-        final_score_surf = self.text_to_surface_mf(score_line, True, 'Red')
-        final_score_rect = final_score_surf.get_rect(center=(400, 200))
         new_game_surf = self.text_to_surface_mf(new_game_line, True, 'Red')
         new_game_rect = new_game_surf.get_rect(midleft=(400, 250))
-        self.screen.blit(final_score_surf, final_score_rect)
+
         self.screen.blit(new_game_surf, new_game_rect)
         self.screen.blit(self.game_name_surf, (200, 40))
 
@@ -489,7 +523,7 @@ class HMGame(object):
             a = self.sky_color.settle_for((117, 194, 246), 2, time_pass_ms)
         else:
             a = True
-        sky_color = self.sky_color.return_color_absolute()
+        sky_color = self.sky_color.return_color()
         self.sky_color_surf.fill(sky_color)
         self.screen.blit(self.sky_color_surf, (0, 0))
 
@@ -547,33 +581,31 @@ class HMGame(object):
         if time_pass_ms > 18700:
             self.game_state = self.NUKE_CREDITS
             self.advanced_enemies = True
-            self.sky_color = ColorSine(phases=[0.0, 0.0, 0.0],
-                                       freqs=[0.0, 0.0, 0.0],
-                                       statics=[1.0, 1.0, 1.0],
-                                       ampls=[0.0, 0.0, 0.0])
+            self.sky_color = ColorAbs((255, 255, 255))
             self.animation_time = pygame.time.get_ticks()
-        # TODO: once it is done, change game state to credits
 
     def post_nuke_credits(self):
         time_pass_ms = pygame.time.get_ticks() - self.animation_time
         a = False
         if time_pass_ms < 4000:
-            self.sky_color.settle_for((238, 95, 17), 4, time_pass_ms) # 230, 177, 0
-        elif time_pass_ms < 5000: # TODO: fix
-            self.sky_color.settle_for((230, 177, 0), 1, time_pass_ms - 4000)
+            self.sky_color.settle_for((238, 95, 17), 4, time_pass_ms)
+        elif time_pass_ms < 5600:
+            self.sky_color.starting_color = (238, 95, 17)
+            self.sky_color.settle_for((225, 177, 0), 1.6, time_pass_ms - 4000)
         else:
+            self.sky_color.starting_color = None
             a = True
-
-
         if a and self.advanced_enemies:
             self.advanced_enemies = False
-            self.sky_color = ColorSine(phases=[0.0, math.pi * 0.4, math.pi * 0.5],
+            _color = self.sky_color.return_color()
+            self.sky_color = ColorSine(phases=[0.0, 0.0, 0.0],
                                        freqs=[0.1, 0.6, 0.7],
-                                       statics=[0.8, 0.6, 0.3],
+                                       statics=[0.8, 0.6, 0.5],
                                        ampls=[0.1, 0.3, 0.5])
+            self.sky_color.convert_from_abs(_color)
 
         if not a:
-            self.screen.fill(self.sky_color.return_color_absolute())
+            self.screen.fill(self.sky_color.return_color())
         if a:
             self.screen.fill(self.sky_color.return_color())
             inc = self.delta_time * 60 / 2000
@@ -599,6 +631,9 @@ class HMGame(object):
             self.progress['highscore'] = max(self.progress.get('highscore', 0), int(self.score))
             if self.score >= 110:
                 self.progress['achieved 110'] = True
+            self.progress['deaths'] = self.progress.get('deaths', 0) + 1
+            if self.progress['deaths'] > 12:
+                self.progress['bear'] = True
 
             # print(self.player_sprite.rect.top - self.player_sprite.rect.bottom)
 
@@ -629,7 +664,7 @@ class HMGame(object):
                 a = Snail(self)
                 a.rect.bottomleft = (810, 300)
                 a.set_speed(v_x=-400)
-            elif self.game_state in [self.FIRST_GAME, self.DEFAULT_GAME]:
+            else: #elif self.game_state in [self.FIRST_GAME, self.DEFAULT_GAME]:
                 a = Snail(self)
                 a.rect.bottomleft = (random.randint(self.enemy_placement_range[0], self.enemy_placement_range[1]), 300)
                 a.set_speed(v_x=-1 * random.randint(self.snail_speed_range[0], self.snail_speed_range[1]))
@@ -729,7 +764,10 @@ class HMGame(object):
             self.max_ammo = MAX_AMMO_CAPACITY - int(self.score)//6
             self.pickup_rate = PICKUP_DROP_RATE - int(self.score)//10
 
-            self.enemy_spawn_interval = ENEMY_SPAWN_INTERVAL_MS - 7 * int(self.score) - 50 * bool(self.advanced_enemies)
+            self.enemy_spawn_interval = ENEMY_SPAWN_INTERVAL_MS - 7 * int(self.score) \
+                                        - 50 * bool(self.advanced_enemies and (self.game_state != self.BEAR_GAME
+                                                                               or self.mask_sprite.deflect))
+
             self.enemy_placement_range = [ENEMY_PLACEMENT_RANGE[0], ENEMY_PLACEMENT_RANGE[1] - int(self.score)]
             self.fly_y_range = [FLY_Y_RANGE[0] - int(self.score)//2, FLY_Y_RANGE[1] + int(self.score)]
             self.snail_speed_range = [SNAIL_SPEED_RANGE[0] + 50 + int(self.score), SNAIL_SPEED_RANGE[1] + 2*int(self.score)]
