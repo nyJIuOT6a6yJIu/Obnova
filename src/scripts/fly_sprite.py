@@ -18,7 +18,7 @@ class Fly(pygame.sprite.Sprite):
         self.center = [0.0, 0.0]
         self.speed = [0, 0]
 
-        if self.game.game_state == self.game.FIRST_GAME:
+        if self.game.game_state == self.game.GameState.FIRST_GAME:
             self.mask_bool = False
         else:
             self.mask_bool = True
@@ -48,7 +48,7 @@ class Fly(pygame.sprite.Sprite):
         self.image = self.anim_frames[int(self.anim_index)]
 
     def update(self):
-        if self.game.game_state != self.game.NUKE_START:
+        if self.game.game_state != self.game.GameState.NUKE_START:
             self._movement()
         self._animate()
 
@@ -74,7 +74,7 @@ class Bat(pygame.sprite.Sprite):
         self.phase_1 = random.randint(1, 250)
         self.phase_2 = random.randint(1, 125)
 
-        if self.game.game_state == self.game.FIRST_GAME:
+        if self.game.game_state == self.game.GameState.FIRST_GAME:
             self.mask_bool = False
         else:
             self.mask_bool = True
@@ -117,7 +117,7 @@ class Bat(pygame.sprite.Sprite):
         self.image = self.anim_frames[int(self.anim_index)]
 
     def update(self):
-        if self.game.game_state != self.game.NUKE_START:
+        if self.game.game_state != self.game.GameState.NUKE_START:
             self._movement()
         self._animate()
 

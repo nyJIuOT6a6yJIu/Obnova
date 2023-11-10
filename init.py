@@ -1,6 +1,9 @@
 from json import loads, dumps
+import pygame
 
 from src.main import HMGame
+
+from src.config.config import SCREEN_RESOLUTION
 
 try:
     with open('saves/save') as file:
@@ -8,7 +11,11 @@ try:
 except FileNotFoundError:
     progress = None
 
-game = HMGame(progress)
+screen = pygame.display.set_mode(SCREEN_RESOLUTION)
+screen.blit(pygame.image.load('src/graphics/loading_1.png'), (0, 0))
+pygame.display.update()
+
+game = HMGame(screen, progress)
 
 new_save = game.start_game()
 new_save = dumps(new_save)

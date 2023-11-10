@@ -59,7 +59,7 @@ class Player(pygame.sprite.Sprite):
             self.speed[0] = 300*bool(self.d_pressed) - 300*bool(self.a_pressed)
 
     def _movement(self):
-        if self.game.game_state == self.game.NUKE_START:
+        if self.game.game_state == self.game.GameState.NUKE_START:
             self.speed[0] = 0
         gravity_acc = self.game.gravity_acceleration
         stiffness = self.game.ground_stiffness
@@ -134,9 +134,12 @@ class Player(pygame.sprite.Sprite):
 class Mask(pygame.sprite.Sprite):
     def __init__(self, _player: Player, mask='rooster'):
         super().__init__()
-
         self.deflect = False
-        # self.dash
+        self.bear_activation_time = None
+
+        self.dash = False  # (?)
+        self.dash_used = None
+
         # self.punch
 
         if mask == 'rooster':
@@ -144,6 +147,9 @@ class Mask(pygame.sprite.Sprite):
         elif mask == 'bear':
             self.deflect = True
             self.image = pygame.transform.scale(_player.game.bear_mask, (90, 80))
+            self.image.set_alpha(255)
+        elif mask == 'zebra':
+            self.image = pygame.transform.scale(_player.game.zebra_mask, (96, 90))
         else:
             self.image = pygame.surface.Surface((90, 95))
             self.image.set_alpha(0)
@@ -153,15 +159,18 @@ class Mask(pygame.sprite.Sprite):
         self.body = _player
 
     def deflect_ability(self):
-        for sprite in self.body.game.enemy_group:
-            sprite.kill()
-        for sprite in self.body.game.enemy_attachments:
-            sprite.kill()
+        self.bear_activation_time = 600
+        for enemy in self.body.game.enemy_group:
+            self.body.game.score_add(f'{enemy.get_type()}_kill')
+            enemy.mask.kill()
+            enemy.kill()
+            self.body.game.kill_run = True
         ds = random.choice([self.body.game.death_sound,
                             self.body.game.death_sound_2,
                             self.body.game.death_sound_3,
                             self.body.game.death_sound_4])
         ds.play()
+        self.body.game.enemy_spawn.extend([None, None])
 
     def update(self):
         match self._type:
@@ -169,6 +178,8 @@ class Mask(pygame.sprite.Sprite):
                 self.rect.center = (self.body.rect.midtop[0] + 7, self.body.rect.midtop[1] + 23)
             case 'bear':
                 self.rect.center = (self.body.rect.midtop[0], self.body.rect.midtop[1] + 23)
+            case 'zebra':
+                self.rect.center = (self.body.rect.center[0] + 3, self.body.rect.center[1] - 10)
 
 
 class Weapon(pygame.sprite.Sprite):

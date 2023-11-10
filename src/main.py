@@ -1,14 +1,13 @@
 # TODO:
 #  .
 #  - nuke animation with poroshenko (pacifist ending)
-#  add post nuke credits
+#  - add post nuke credits
 #  .
 #  - (?) add more patterns for enemies (enter the sand man): frogs (snail) are slower but jump/lunge discard weapon on contact)
 #  .
 #  - (?) add enviromental hazards (enter the sand man)
 #  - (?) freeze pickup (розібратись з мікшером, щоб ставити музику на паузу)
 #  .
-#  - add "block 1 hit, then kill everyone" bear mask draw deflect icon
 #  - add zebra mask and dodge ability after nuke ending (fun&games)
 #  - add tiger mask and kick/throw ability after pacifist run (new wave hookers)
 #  - add white-black bad apple after tiger run
@@ -19,6 +18,7 @@
 
 import math
 import random
+from enum import Enum, auto
 
 import pygame
 
@@ -29,8 +29,7 @@ from src.scripts.player_sprite import Player, Mask, Weapon
 from src.scripts.fly_sprite import Fly, Bat
 from src.scripts.snail_sprite import Snail, Cham
 
-from src.config.config import SCREEN_RESOLUTION,\
-                              DISPLAY_CAPTION,\
+from src.config.config import DISPLAY_CAPTION,\
                               GRAVITY_ACCELERATION,\
                               GROUND_STIFFNESS,\
                               ENEMY_SPAWN_INTERVAL_MS,\
@@ -87,38 +86,43 @@ class MusicHandler:
 class HMGame(object):
     # 48px = 1 meter
 
+    class GameState(Enum):
+        EXIT         = auto()
+
+        FIRST_GAME   = auto()
+        FIRST_MENU   = auto()
+
+        DEFAULT_GAME = auto()
+        BEAR_GAME    = auto()
+        ZEBRA_GAME   = auto()
+
+        DEFAULT_MENU = auto()
+
+        NUKE_START   = auto()
+        NUKE_CREDITS = auto()
+        NUKE_MENU    = auto()
+
     def __new__(cls, *args, **kwargs):
         if not hasattr(cls, 'instance'):
             cls.instance = super(HMGame, cls).__new__(cls)
         return cls.instance
 
-    def __init__(self, progress=None):
-        self.EXIT         = -100
-        self.FIRST_GAME   = -1
-        self.FIRST_MENU   = -2
-        self.DEFAULT_GAME = 1
-        self.BEAR_GAME     = 2
-        self.DEFAULT_MENU = 0
-        self.NUKE_START   = 45
-        self.NUKE_CREDITS = 46
-        self.NUKE_MENU    = -46
+    def __init__(self, screen, progress=None):
 
         if progress is None:
             progress = dict()
         self.progress = progress
 
-    def start_game(self):
+        self.screen = screen
 
         pygame.init()
 
-        self.screen = pygame.display.set_mode(SCREEN_RESOLUTION)
+    def start_game(self):
 
         self.load_images()
 
         pygame.display.set_caption(DISPLAY_CAPTION)
         pygame.display.set_icon(self.rooster_mask)
-
-        self.nuke_menu_palms.set_alpha(70)
 
         # self.start_time = 0
         self.mouse = pygame.sprite.Sprite()
@@ -144,7 +148,11 @@ class HMGame(object):
         self.wasted_surf = self.text_to_surface_mf('[REDACTED]', True, 'White', 'Black', 48)
         self.wasted_rect = self.wasted_surf.get_rect(center=(179, 181))
 
+        self.screen.blit(pygame.image.load('src/graphics/loading_2.png'), (0, 0))
+        pygame.display.update()
+
         self.load_sounds()
+
         self.music_handler = MusicHandler()
 
         self.gun_sound.set_volume(1.1)
@@ -159,6 +167,7 @@ class HMGame(object):
 
         self.run_music_1.set_volume(0.3)
         self.bear_music.set_volume(0.4)
+        self.zebra_music.set_volume(0.4)
         self.menu_music.set_volume(0.2)
         self.enter_the_sandman_music.set_volume(0.8)
         self.nuke_music.set_volume(1.0)
@@ -172,8 +181,9 @@ class HMGame(object):
         if not self.progress:
             self.set_up_game('first')
         else:
-            self.game_state = self.DEFAULT_MENU
+            self.game_state = self.GameState.DEFAULT_MENU
             self.music_handler.music_play(self.menu_music)
+
         return self.game_loop()
 
     def load_images(self):
@@ -192,7 +202,11 @@ class HMGame(object):
         self.player_stand = pygame.image.load('src/graphics/Player/player_stand.png').convert_alpha()
 
         self.rooster_mask = pygame.image.load('src/graphics/Player/rooster.png').convert_alpha()
-        self.bear_mask     = pygame.image.load('src/graphics/Player/bear.png').convert_alpha()
+
+        self.bear_mask   = pygame.image.load('src/graphics/Player/bear.png').convert_alpha()
+        self.bear_banner = pygame.image.load('src/graphics/do_you_know_this_man.png').convert()
+
+        self.zebra_mask = pygame.image.load('src/graphics/Player/zebra.png').convert_alpha()
 
         self.weapon   = pygame.image.load('src/graphics/GUN.png').convert_alpha()
         self.ammo     = pygame.transform.scale(pygame.image.load('src/graphics/ammo.png').convert_alpha(), (50, 50))
@@ -222,8 +236,12 @@ class HMGame(object):
         self.menu_music      = pygame.mixer.Sound('src/audio/menu music/menu.mp3')
         self.post_nuke_music = pygame.mixer.Sound('src/audio/menu music/post_nuke_menu.mp3')
 
+        self.screen.blit(pygame.image.load('src/graphics/loading_3.png'), (0, 0))
+        pygame.display.update()
+
         self.run_music_1 = pygame.mixer.Sound('src/audio/run music/run_music1.mp3')
-        self.bear_music   = pygame.mixer.Sound('src/audio/run music/bear_run_music.mp3')
+        self.bear_music  = pygame.mixer.Sound('src/audio/run music/bear_run_music.mp3')
+        self.zebra_music = pygame.mixer.Sound('src/audio/run music/zebra_run_music.mp3')
 
         self.enter_the_sandman_music = pygame.mixer.Sound('src/audio/boss music/enter_the_sandman.mp3')
 
@@ -261,15 +279,16 @@ class HMGame(object):
         self.enemy_group = pygame.sprite.LayeredUpdates()
         self.enemy_attachments = pygame.sprite.LayeredUpdates()
 
-        self.score = 130
+        self.score = 0
 
         self.gunshot_afterimage = []
 
-        if mode in ['rooster', 'bear']:
+        if mode in ['rooster', 'bear', 'zebra']:
             self.jump_tip = self.text_to_surface_mf('SPACE/W to Jump', True, '#5d5d5d', size=32)
             self.move_tip = self.text_to_surface_mf('A/D to Move', True, '#5d5d5d', size=32)
             self.shoot_tup = self.text_to_surface_mf('LMB to Shoot', True, '#5d5d5d', size=32)
             self.pickup_tip = self.text_to_surface_mf('RMB to Drop', True, '#5d5d5d', size=32)
+            self.dash_tip = self.text_to_surface_mf('SHIFT to Dash', True, '#5d5d5d', size=32)
         elif mode == 'first':
             self.jump_tip = self.text_to_surface_mf('SPACE to Jump', True, '#4d4d4d', size=35)
             self.move_tip = self.text_to_surface_mf('', True, '#5d5d5d', size=32)
@@ -292,9 +311,14 @@ class HMGame(object):
         self.snail_speed_range = SNAIL_SPEED_RANGE
         self.fly_speed_range =  FLY_SPEED_RANGE
 
-        self.game_state = {'first': self.FIRST_GAME, 'rooster': self.DEFAULT_GAME, 'bear': self.BEAR_GAME}[mode]
+        self.game_state = {'first': self.GameState.FIRST_GAME,
+                           'rooster': self.GameState.DEFAULT_GAME,
+                           'bear': self.GameState.BEAR_GAME,
+                           'zebra': self.GameState.ZEBRA_GAME}[mode]
         self.advanced_enemies = False
+        self.sky_is_over = False  # Even though we can't afford
         self.sky_color_surf.set_alpha(255)
+        self.ground_surf.set_alpha(255)
         self.sky_color_foreground.set_alpha(0)
         self.kill_run = False
 
@@ -304,27 +328,29 @@ class HMGame(object):
             self.music_handler.music_play(self.run_music_1)
         elif mode == 'bear':
             self.music_handler.music_play(self.bear_music)
+        elif mode == 'zebra':
+            self.music_handler.music_play(self.zebra_music)
 
     def game_loop(self):
-        while self.game_state != self.EXIT:
+        while self.game_state != self.GameState.EXIT:
             self.last_time_frame = pygame.time.get_ticks()
             self.event_loop()
             match self.game_state:
-                case self.NUKE_START:
+                case self.GameState.NUKE_START:
                     self.nuke_animation()
-                case self.NUKE_CREDITS:
+                case self.GameState.NUKE_CREDITS:
                     self.post_nuke_credits()
-                case self.NUKE_MENU:
+                case self.GameState.NUKE_MENU:
                     self.menu_frame_nuke()
-                case self.DEFAULT_GAME | self.BEAR_GAME:
+                case self.GameState.DEFAULT_GAME | self.GameState.BEAR_GAME | self.GameState.ZEBRA_GAME:
                     self.runtime_frame()
-                case self.DEFAULT_MENU:
+                case self.GameState.DEFAULT_MENU:
                     self.menu_frame()
-                case self.FIRST_GAME:
+                case self.GameState.FIRST_GAME:
                     self.runtime_frame('first')
-                case self.FIRST_MENU:
+                case self.GameState.FIRST_MENU:
                     self.menu_frame_first()
-            if self.game_state != self.EXIT:
+            if self.game_state != self.GameState.EXIT:
                 pygame.display.update()
                 self.clock.tick(60)
                 self.delta_time = (pygame.time.get_ticks() - self.last_time_frame)
@@ -334,9 +360,12 @@ class HMGame(object):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
-                self.game_state = self.EXIT
+                self.game_state = self.GameState.EXIT
                 # exit()
-            if self.game_state in [self.FIRST_GAME, self.DEFAULT_GAME, self.BEAR_GAME]:
+            if self.game_state in [self.GameState.FIRST_GAME,
+                                   self.GameState.DEFAULT_GAME,
+                                   self.GameState.BEAR_GAME,
+                                   self.GameState.ZEBRA_GAME]:
                 # players controls
 
                 if event.type == pygame.KEYDOWN:
@@ -350,29 +379,28 @@ class HMGame(object):
 
                 # enemy spawn
                 if event.type == self.enemy_spawn_timer:
-                    if self.game_state in [self.DEFAULT_GAME, self.BEAR_GAME]:
+                    if self.enemy_spawn:
+                        next_enemy = self.enemy_spawn.pop(0)
+                        if next_enemy == 'snail':
+                            self.add_new_enemy(1, 0)
+                        elif next_enemy == 'fly':
+                            self.add_new_enemy(0, 1)
+                    else:
                         self.add_new_enemy(3, 1)
-                        pygame.time.set_timer(self.enemy_spawn_timer, self.enemy_spawn_interval, 1)
-                    elif self.game_state == self.FIRST_GAME:
-                        if self.enemy_spawn:
-                            next_enemy = self.enemy_spawn.pop(0)
-                            if next_enemy == 'snail':
-                                self.add_new_enemy(1, 0)
-                            elif next_enemy == 'fly':
-                                self.add_new_enemy(0, 1)
-                        else:
-                            self.add_new_enemy(3, 1)
-                        pygame.time.set_timer(self.enemy_spawn_timer, self.enemy_spawn_interval, 1)
+                    pygame.time.set_timer(self.enemy_spawn_timer, self.enemy_spawn_interval, 1)
 
-            elif self.game_state in [self.FIRST_MENU, self.DEFAULT_MENU, self.NUKE_MENU] \
+
+            elif self.game_state in [self.GameState.FIRST_MENU, self.GameState.DEFAULT_MENU, self.GameState.NUKE_MENU] \
                     and event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_y:
                     self.set_up_game()
                 elif self.progress.get('bear', False) and event.key == pygame.K_b:
                     self.set_up_game('bear')
+                elif self.progress.get('zebra', True) and event.key == pygame.K_z:  # TODO: swap True for False
+                    self.set_up_game('zebra')
 
-            elif self.game_state == self.NUKE_CREDITS and (event.type == pygame.KEYDOWN or event.type == pygame.MOUSEBUTTONDOWN):
-                self.game_state = self.NUKE_MENU
+            elif self.game_state == self.GameState.NUKE_CREDITS and (event.type == pygame.KEYDOWN or event.type == pygame.MOUSEBUTTONDOWN):
+                self.game_state = self.GameState.NUKE_MENU
                 _color = self.sky_color.return_color()
                 _color = (pygame.math.clamp(_color[0], 179, 229),
                           pygame.math.clamp(_color[1], 77, 229),
@@ -387,7 +415,7 @@ class HMGame(object):
     def runtime_frame(self, mode='rooster'):
         sky_color = self.sky_color.return_color()
         inc = self.delta_time * 60 / 1000
-        if not self.advanced_enemies:
+        if not self.sky_is_over:
             self.sky_color_surf.fill(sky_color)
         else:
             self.sky_color_foreground.fill(sky_color)
@@ -398,9 +426,9 @@ class HMGame(object):
         if mode == 'first':
             self.screen.blit(self.normal_sky_surf, (0, 0))
         else: #if mode == 'rooster':
-            if not self.advanced_enemies:
-                self.screen.blit(self.sky_color_surf, (0, 0))  # TODO: щось тут спичиняє фрізи
-            self.screen.blit(self.sky_surf, (0, 0))
+            if not self.sky_is_over:
+                self.screen.blit(self.sky_color_surf, (0, 0))
+                self.screen.blit(self.sky_surf, (0, 0))
 
         score_surf = self.text_to_surface_mf(f'Score: {int(min(self.score, 137))}', True, (44+200*bool(self.kill_run or int(self.score) >= 110),
                                                                                       44+200*bool(not self.kill_run and int(self.score) >= 110),
@@ -428,15 +456,17 @@ class HMGame(object):
         self.draw_tool_tips()
         self.draw_ammo_count()
         self.draw_jumps_count()
+        self.draw_spec_abilities()
 
         self.difficulty_scaling()
         self.enter_the_sandman()
 
         if self.score >= 137:
-            self.game_state = self.NUKE_START
+            self.game_state = self.GameState.NUKE_START
             self.music_handler.music_stop(1050)
             _color = self.sky_color.return_color()
             self.sky_color = ColorAbs(_color)
+            self.screen.blit(self.ground_surf, (0, 300))
             self.animation_time = pygame.time.get_ticks()
 
             return
@@ -446,15 +476,15 @@ class HMGame(object):
                 self.mask_sprite.deflect = False
                 self.mask_sprite.deflect_ability()
             else:
-                if self.game_state in [self.DEFAULT_GAME, self.BEAR_GAME]:
-                    self.game_state = self.DEFAULT_MENU
-                elif self.game_state == self.FIRST_GAME:
-                    self.game_state = self.FIRST_MENU
+                if self.game_state in [self.GameState.DEFAULT_GAME, self.GameState.BEAR_GAME, self.GameState.ZEBRA_GAME]:
+                    self.game_state = self.GameState.DEFAULT_MENU
+                elif self.game_state == self.GameState.FIRST_GAME:
+                    self.game_state = self.GameState.FIRST_MENU
         self.game_over()
 
-        # # TODO: bg will be colored and sky will be trippy
-        if self.advanced_enemies:
+        if self.sky_is_over:
             self.sky_color_foreground.set_alpha(int(self.score)-50)
+            self.ground_surf.set_alpha(max(365 - 3*int(self.score), 50))
             self.screen.blit(self.sky_color_foreground, (0, 0))
 
     def menu_frame(self):
@@ -464,19 +494,25 @@ class HMGame(object):
         self.screen.blit(self.wasted_surf, self.wasted_rect)
 
         score_line = f'Your score is {int(self.score)}'
-        new_game_line = 'Press Y to continue'
+        rooster_game_line = 'Press Y to continue'
+        bear_game_line = ''  # TODO: add zebra
         if int(self.score) <= 0:
             score_line = ''
-            new_game_line = 'Press Y key to start'
+            rooster_game_line = 'Press Y key to start'
         elif int(self.score) >= 110 and int(self.score) < 137:
-            new_game_line = 'Pacan k uspehoo shol (Y)'
+            rooster_game_line = 'Pacan k uspehoo shol (Y)'
+        if self.progress.get('bear', False):
+            bear_game_line = 'Press B to bear the unbearable'
 
         final_score_surf = self.text_to_surface_mf(score_line, True, 'Red')
-        final_score_rect = final_score_surf.get_rect(center=(400, 200))
-        new_game_surf = self.text_to_surface_mf(new_game_line, True, 'Red')
-        new_game_rect = new_game_surf.get_rect(midleft=(400, 250))
+        final_score_rect = final_score_surf.get_rect(center=(380, 100))
+        rooster_game_surf = self.text_to_surface_mf(rooster_game_line, True, 'Red')
+        rooster_game_rect = rooster_game_surf.get_rect(midleft=(410, 250))
+        bear_game_surf = self.text_to_surface_mf(bear_game_line, True, 'Red')
+        bear_game_surf.set_alpha(120)
         self.screen.blit(final_score_surf, final_score_rect)
-        self.screen.blit(new_game_surf, new_game_rect)
+        self.screen.blit(rooster_game_surf, rooster_game_rect)
+        self.screen.blit(bear_game_surf, (50, 350))
         self.screen.blit(self.game_name_surf, (200, 40))
 
         inc = self.delta_time * 60 / 1000
@@ -498,13 +534,17 @@ class HMGame(object):
         final_score_surf = self.text_to_surface_mf(score_line, True, 'Red')
         final_score_rect = final_score_surf.get_rect(center=(400, 200))
         new_game_surf = self.text_to_surface_mf(new_game_line, True, 'Red')
-        new_game_rect = new_game_surf.get_rect(midleft=(400, 250))
+        new_game_rect = new_game_surf.get_rect(midleft=(380, 250))
         self.screen.blit(final_score_surf, final_score_rect)
         self.screen.blit(new_game_surf, new_game_rect)
         self.screen.blit(self.game_name_surf, (200, 40))
 
     def menu_frame_nuke(self):
-        self.screen.fill(self.sky_color.return_color())
+        _color = self.sky_color.return_color()
+        _alpha = max(_color[0] - 170, 5)
+        self.nuke_menu_palms.set_alpha(_alpha)
+
+        self.screen.fill(_color)
         self.screen.blit(self.nuke_menu_palms, (0, 0))
 
         new_game_line = 'Press Y to start again'
@@ -579,7 +619,7 @@ class HMGame(object):
             self.screen.blit(self.sky_color_foreground, (0, 0))
 
         if time_pass_ms > 18700:
-            self.game_state = self.NUKE_CREDITS
+            self.game_state = self.GameState.NUKE_CREDITS
             self.advanced_enemies = True
             self.sky_color = ColorAbs((255, 255, 255))
             self.animation_time = pygame.time.get_ticks()
@@ -612,27 +652,26 @@ class HMGame(object):
             self.sky_color.increment(inc)
 
         if time_pass_ms > 230300:
-            self.game_state = self.NUKE_MENU
+            self.game_state = self.GameState.NUKE_MENU
             self.sky_color.red, self.sky_color.green, self.sky_color.blue = 0, 0, 0
             self.music_handler.music_play(self.post_nuke_music)
-        # TODO: anykey will change game state to postnuke menu (different music and no player)
         #  random credit generation
 
     def game_over(self):
-        if self.game_state in [self.FIRST_MENU, self.DEFAULT_MENU]:
+        if self.game_state in [self.GameState.FIRST_MENU, self.GameState.DEFAULT_MENU]:
             ds = random.choice([self.death_sound,
                                 self.death_sound_2,
                                 self.death_sound_3,
                                 self.death_sound_4])
             ds.play()
             self.sky_color.increment(50)
-            if self.game_state == self.DEFAULT_MENU:
+            if self.game_state == self.GameState.DEFAULT_MENU:
                 self.music_handler.music_stop(1500)
             self.progress['highscore'] = max(self.progress.get('highscore', 0), int(self.score))
             if self.score >= 110:
                 self.progress['achieved 110'] = True
             self.progress['deaths'] = self.progress.get('deaths', 0) + 1
-            if self.progress['deaths'] > 12:
+            if self.progress['deaths'] > 6:
                 self.progress['bear'] = True
 
             # print(self.player_sprite.rect.top - self.player_sprite.rect.bottom)
@@ -660,7 +699,7 @@ class HMGame(object):
                 a.rect.bottomleft = (random.randint(815, 850), 300)
                 a.set_speed(v_x=-1 * random.randint(200, 300))
 
-            elif self.game_state == self.FIRST_GAME and len(self.enemy_spawn):
+            elif self.game_state == self.GameState.FIRST_GAME and len(self.enemy_spawn):
                 a = Snail(self)
                 a.rect.bottomleft = (810, 300)
                 a.set_speed(v_x=-400)
@@ -714,7 +753,7 @@ class HMGame(object):
 
     def draw_tool_tips(self):
         match self.game_state:
-            case 1:
+            case self.GameState.DEFAULT_GAME | self.GameState.BEAR_GAME | self.GameState.ZEBRA_GAME:
                 if int(self.score) < 20:
                     self.jump_tip.set_alpha(100-5*int(self.score))
                     self.move_tip.set_alpha(100-5*int(self.score))
@@ -724,7 +763,7 @@ class HMGame(object):
                     self.screen.blit(self.move_tip, (620, 45))
                     self.screen.blit(self.shoot_tup, (620, 65))
                     self.screen.blit(self.pickup_tip, (620, 85))
-            case -1:
+            case self.GameState.FIRST_GAME:
                 if int(self.score) < 20:
                     self.jump_tip.set_alpha(100 - 5 * int(self.score))
                     self.screen.blit(self.jump_tip, (620, 25))
@@ -755,6 +794,19 @@ class HMGame(object):
                 _image = self.jump_off
             self.screen.blit(_image, (20 + i*55, 330))
 
+    def draw_spec_abilities(self):
+        if self.mask_sprite.bear_activation_time is not None and self.mask_sprite.bear_activation_time > 0:
+            self.mask_sprite.image.set_alpha(0)
+            _alpha = int(255 * math.sin(1 + (600 - self.mask_sprite.bear_activation_time)/300))
+            self.bear_banner.set_alpha(_alpha)
+            self.mask_sprite.bear_activation_time -= self.delta_time
+            self.screen.blit(self.bear_banner, (0, 0))
+        else:
+            self.mask_sprite.bear_activation_time = None
+        # if self.game_state == self.BEAR_GAME and not self.mask_sprite.deflect:
+
+
+
     def difficulty_scaling(self):
         if self.kill_run and int(self.score) != self.last_rescale_score:
             self.ground_stiffness = GROUND_STIFFNESS * (131 - int(self.score))/137
@@ -765,7 +817,7 @@ class HMGame(object):
             self.pickup_rate = PICKUP_DROP_RATE - int(self.score)//10
 
             self.enemy_spawn_interval = ENEMY_SPAWN_INTERVAL_MS - 7 * int(self.score) \
-                                        - 50 * bool(self.advanced_enemies and (self.game_state != self.BEAR_GAME
+                                        - 50 * bool(self.advanced_enemies and (self.game_state != self.GameState.BEAR_GAME
                                                                                or self.mask_sprite.deflect))
 
             self.enemy_placement_range = [ENEMY_PLACEMENT_RANGE[0], ENEMY_PLACEMENT_RANGE[1] - int(self.score)]
@@ -782,6 +834,7 @@ class HMGame(object):
                 self.kill_run_init_sound.play()
                 self.music_handler.music_play(self.enter_the_sandman_music)
             self.advanced_enemies = True
+            self.sky_is_over = True  # I don't wanna see you go
 
     def text_to_surface_mf(self, text, antialias, color, bg=None, size=50):
         _font = pygame.font.Font(self.main_font, size)

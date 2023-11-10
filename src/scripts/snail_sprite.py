@@ -18,7 +18,7 @@ class Snail(pygame.sprite.Sprite):
         self.center = [0.0, 0.0]
         self.speed = [0, 0]
 
-        if self.game.game_state == self.game.FIRST_GAME:
+        if self.game.game_state == self.game.GameState.FIRST_GAME:
             self.mask_bool = False
         else:
             self.mask_bool = True
@@ -48,7 +48,7 @@ class Snail(pygame.sprite.Sprite):
         self.image = self.anim_frames[int(self.anim_index)]
 
     def update(self):
-        if self.game.game_state != self.game.NUKE_START:
+        if self.game.game_state != self.game.GameState.NUKE_START:
             self._movement()
         self._animate()
 
@@ -89,10 +89,10 @@ class Cham(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.center = [0.0, 0.0]
         self.speed = [0, 0]
-        self._alpha = 170 - self.game.score
+        self._alpha = 140 - self.game.score
         self.t = 500
 
-        if self.game.game_state == self.game.FIRST_GAME:
+        if self.game.game_state == self.game.GameState.FIRST_GAME:
             self.mask_bool = False
         else:
             self.mask_bool = True
@@ -127,7 +127,7 @@ class Cham(pygame.sprite.Sprite):
         self.t = (self.t + self.game.delta_time)%2000
 
     def update(self):
-        if self.game.game_state != self.game.NUKE_START:
+        if self.game.game_state != self.game.GameState.NUKE_START:
             self._movement()
         self._animate()
 
