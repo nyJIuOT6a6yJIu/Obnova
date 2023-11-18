@@ -3,15 +3,13 @@
 #  - nuke animation with poroshenko (pacifist ending)
 #  - add post nuke credits
 #  .
-#  - (?) add more patterns for enemies (enter the sand man): frogs (snail) are slower but jump/lunge discard weapon on contact)
+#  - add more patterns for enemies (wednesday): frogs (snail) are slower but jump/lunge discard weapon on contact)
 #  .
 #  - (?) add enviromental hazards (enter the sand man)
 #  - (?) freeze pickup (розібратись з мікшером, щоб ставити музику на паузу)
 #  .
-#  - add zebra mask and dodge ability after nuke ending (fun&games)
-#  - add tiger mask and kick/throw ability after pacifist run (new wave hookers)
 #  - add white-black bad apple after tiger run
-#  - add frog mask (all masks effects, but only on Wednesdays)
+#  - endless run after tiger run
 #  - add sralker after bad apple run
 #  .
 #  - introduce speed limit (so that game wont crush)
@@ -19,13 +17,15 @@
 import math
 import random
 from enum import Enum, auto
+from datetime import datetime
+from json import dumps
 
 import pygame
 
 from src.scripts.color_sine import ColorSine
 from src.scripts.abs_color import ColorAbs
 
-from src.scripts.player_sprite import Player, Mask, Weapon
+from src.scripts.player_sprite import Player, Mask, Weapon, Punch
 from src.scripts.fly_sprite import Fly, Bat
 from src.scripts.snail_sprite import Snail, Cham
 
@@ -95,6 +95,8 @@ class HMGame(object):
         DEFAULT_GAME = auto()
         BEAR_GAME    = auto()
         ZEBRA_GAME   = auto()
+        TIGER_GAME   = auto()
+        FROG_GAME    = auto()
 
         DEFAULT_MENU = auto()
 
@@ -131,8 +133,6 @@ class HMGame(object):
 
         self.clock = pygame.time.Clock()
         self.main_font = 'src/font/Pixeltype.ttf'
-        # self.pixel_font = pygame.font.Font('font/Pixeltype.ttf', 50)
-        # self.micro_pixel_font = pygame.font.Font('font/Pixeltype.ttf', 30)
 
         self.game_name_surf = self.text_to_surface_mf('Hohline Cherkasy', True, 'Red')
 
@@ -145,6 +145,8 @@ class HMGame(object):
 
         self.player_menu = pygame.transform.rotozoom(self.player_stand, 0, 3)
         self.player_menu_rect = self.player_menu.get_rect(center=(179, 200))
+        self.frog_menu = pygame.transform.scale(self.frog_mask, (225, 195))
+        self.frog_menu_rect = self.frog_menu.get_rect(midtop=[self.player_menu_rect.centerx+3, self.player_menu_rect.top-10])
         self.wasted_surf = self.text_to_surface_mf('[REDACTED]', True, 'White', 'Black', 48)
         self.wasted_rect = self.wasted_surf.get_rect(center=(179, 181))
 
@@ -158,6 +160,9 @@ class HMGame(object):
         self.gun_sound.set_volume(1.1)
         self.empty_gun_sound.set_volume(1.1)
         self.gun_pickup_sound.set_volume(0.8)
+        self.throw_sound.set_volume(4.5)
+        self.swing_sound.set_volume(3.0)
+        self.punch_sound.set_volume(4.0)
 
         self.kill_run_init_sound.set_volume(1.5)
         self.death_sound.set_volume(1.3)
@@ -168,6 +173,7 @@ class HMGame(object):
         self.run_music_1.set_volume(0.3)
         self.bear_music.set_volume(0.4)
         self.zebra_music.set_volume(0.4)
+        self.tiger_music.set_volume(0.8)
         self.menu_music.set_volume(0.2)
         self.enter_the_sandman_music.set_volume(0.8)
         self.nuke_music.set_volume(1.0)
@@ -208,10 +214,26 @@ class HMGame(object):
 
         self.zebra_mask = pygame.image.load('src/graphics/Player/zebra.png').convert_alpha()
 
+        self.tiger_mask_normal = pygame.image.load('src/graphics/Player/tiger_normal.png').convert_alpha()
+        self.tiger_mask_worn   = pygame.transform.scale(pygame.image.load('src/graphics/Player/tiger.png').convert_alpha(), (90, 80))
+
+        self.frog_mask = pygame.image.load('src/graphics/Player/frog.png').convert_alpha()
+
+        self.punch_frames = [pygame.image.load('src/graphics/Player/punches/punch_1.png').convert_alpha(),
+                             pygame.image.load('src/graphics/Player/punches/punch_1-5.png').convert_alpha(),
+                             pygame.image.load('src/graphics/Player/punches/punch_2.png').convert_alpha(),
+                             pygame.image.load('src/graphics/Player/punches/punch_2-5.png').convert_alpha(),
+                             pygame.image.load('src/graphics/Player/punches/punch_3.png').convert_alpha()
+                             ]
+        for frame in self.punch_frames:
+            frame.set_alpha(100)
+
         self.weapon   = pygame.image.load('src/graphics/GUN.png').convert_alpha()
         self.ammo     = pygame.transform.scale(pygame.image.load('src/graphics/ammo.png').convert_alpha(), (50, 50))
         self.jump_on  = pygame.transform.scale(pygame.image.load('src/graphics/jump_on.png').convert_alpha(), (50, 50))
         self.jump_off = pygame.transform.scale(pygame.image.load('src/graphics/jump_off.png').convert_alpha(), (50, 50))
+        self.dash     = pygame.transform.scale(pygame.image.load('src/graphics/dash.png').convert_alpha(), (50, 50))
+        self.punch    = pygame.transform.scale(pygame.image.load('src/graphics/punch.png').convert_alpha(), (50, 50))
 
         self.fly_1    = pygame.image.load('src/graphics/fly/Fly1.png').convert_alpha()
         self.fly_2    = pygame.image.load('src/graphics/fly/Fly2.png').convert_alpha()
@@ -242,6 +264,7 @@ class HMGame(object):
         self.run_music_1 = pygame.mixer.Sound('src/audio/run music/run_music1.mp3')
         self.bear_music  = pygame.mixer.Sound('src/audio/run music/bear_run_music.mp3')
         self.zebra_music = pygame.mixer.Sound('src/audio/run music/zebra_run_music.mp3')
+        self.tiger_music = pygame.mixer.Sound('src/audio/run music/tiger_run_music.mp3')
 
         self.enter_the_sandman_music = pygame.mixer.Sound('src/audio/boss music/enter_the_sandman.mp3')
 
@@ -251,6 +274,9 @@ class HMGame(object):
         self.empty_gun_sound     = pygame.mixer.Sound('src/audio/misc sounds/empty_gun.mp3')
         self.gun_pickup_sound    = pygame.mixer.Sound('src/audio/misc sounds/gun_pickup.mp3')
         self.kill_run_init_sound = pygame.mixer.Sound('src/audio/misc sounds/kill_run_init.mp3')
+        self.throw_sound         = pygame.mixer.Sound('src/audio/misc sounds/throw.mp3')
+        self.swing_sound         = pygame.mixer.Sound('src/audio/misc sounds/swing.mp3')
+        self.punch_sound         = pygame.mixer.Sound('src/audio/misc sounds/punch.mp3')
 
     def set_up_game(self, mode='rooster'):
         self.max_ammo = MAX_AMMO_CAPACITY
@@ -268,11 +294,12 @@ class HMGame(object):
 
         if mode == 'first':
             self.enemy_spawn = [None, None, 'snail', 'snail', 'fly', 'snail', None]
-            self.player_sprite.set_attachments(False)
+            # self.player_sprite.set_attachments(None)
 
         else:#if mode == 'rooster':
             self.enemy_spawn = []
-            self.player_sprite.pick_up_weapon(Weapon(self))
+            if mode != 'tiger':
+                self.player_sprite.pick_up_weapon(Weapon(self))
 
         # player_attachments.change_layer(mask_sprite, 0)
 
@@ -280,19 +307,22 @@ class HMGame(object):
         self.enemy_attachments = pygame.sprite.LayeredUpdates()
 
         self.score = 0
+        self.kills = 0
 
         self.gunshot_afterimage = []
 
-        if mode in ['rooster', 'bear', 'zebra']:
+        if mode in ['rooster', 'bear', 'zebra', 'tiger', 'frog']:
             self.jump_tip = self.text_to_surface_mf('SPACE/W to Jump', True, '#5d5d5d', size=32)
             self.move_tip = self.text_to_surface_mf('A/D to Move', True, '#5d5d5d', size=32)
-            self.shoot_tup = self.text_to_surface_mf('LMB to Shoot', True, '#5d5d5d', size=32)
+            self.shoot_tip = self.text_to_surface_mf('LMB to Shoot', True, '#5d5d5d', size=32)
             self.pickup_tip = self.text_to_surface_mf('RMB to Drop', True, '#5d5d5d', size=32)
-            self.dash_tip = self.text_to_surface_mf('SHIFT to Dash', True, '#5d5d5d', size=32)
+            self.dash_tip = self.text_to_surface_mf('SHIFT to Air Dash', True, '#5d5d5d', size=32)
+            if mode == 'tiger':
+                self.shoot_tip = self.text_to_surface_mf('LMB to Punch', True, '#5d5d5d', size=32)
         elif mode == 'first':
             self.jump_tip = self.text_to_surface_mf('SPACE to Jump', True, '#4d4d4d', size=35)
             self.move_tip = self.text_to_surface_mf('', True, '#5d5d5d', size=32)
-            self.shoot_tup = self.text_to_surface_mf('', True, '#5d5d5d', size=32)
+            self.shoot_tip = self.text_to_surface_mf('', True, '#5d5d5d', size=32)
             self.pickup_tip = self.text_to_surface_mf('', True, '#5d5d5d', size=32)
 
         self.delta_time = 0
@@ -314,13 +344,16 @@ class HMGame(object):
         self.game_state = {'first': self.GameState.FIRST_GAME,
                            'rooster': self.GameState.DEFAULT_GAME,
                            'bear': self.GameState.BEAR_GAME,
-                           'zebra': self.GameState.ZEBRA_GAME}[mode]
+                           'zebra': self.GameState.ZEBRA_GAME,
+                           'tiger': self.GameState.TIGER_GAME,
+                           'frog': self.GameState.FROG_GAME}[mode]
+
         self.advanced_enemies = False
         self.sky_is_over = False  # Even though we can't afford
         self.sky_color_surf.set_alpha(255)
         self.ground_surf.set_alpha(255)
         self.sky_color_foreground.set_alpha(0)
-        self.kill_run = False
+        # self.kill_run = False
 
         if mode == 'first':
             self.music_handler.music_play(self.menu_music)
@@ -330,7 +363,11 @@ class HMGame(object):
             self.music_handler.music_play(self.bear_music)
         elif mode == 'zebra':
             self.music_handler.music_play(self.zebra_music)
-
+        elif mode == 'tiger':
+            self.music_handler.music_play(self.tiger_music)
+        elif mode == 'frog':
+            _music = random.choice([self.menu_music, self.run_music_1, self.bear_music, self.zebra_music, self.tiger_music])
+            self.music_handler.music_play(_music)
     def game_loop(self):
         while self.game_state != self.GameState.EXIT:
             self.last_time_frame = pygame.time.get_ticks()
@@ -342,7 +379,8 @@ class HMGame(object):
                     self.post_nuke_credits()
                 case self.GameState.NUKE_MENU:
                     self.menu_frame_nuke()
-                case self.GameState.DEFAULT_GAME | self.GameState.BEAR_GAME | self.GameState.ZEBRA_GAME:
+                case self.GameState.DEFAULT_GAME | self.GameState.BEAR_GAME | \
+                     self.GameState.ZEBRA_GAME | self.GameState.TIGER_GAME | self.GameState.FROG_GAME:
                     self.runtime_frame()
                 case self.GameState.DEFAULT_MENU:
                     self.menu_frame()
@@ -365,7 +403,9 @@ class HMGame(object):
             if self.game_state in [self.GameState.FIRST_GAME,
                                    self.GameState.DEFAULT_GAME,
                                    self.GameState.BEAR_GAME,
-                                   self.GameState.ZEBRA_GAME]:
+                                   self.GameState.ZEBRA_GAME,
+                                   self.GameState.TIGER_GAME,
+                                   self.GameState.FROG_GAME]:
                 # players controls
 
                 if event.type == pygame.KEYDOWN:
@@ -374,7 +414,7 @@ class HMGame(object):
                     self.player_sprite.player_input(event.key, True)
 
                 if event.type == pygame.MOUSEBUTTONDOWN:
-                    self.player_sprite.player_input(event.button, False)
+                    self.player_sprite.player_input(event.button, False, event.pos)
 
 
                 # enemy spawn
@@ -396,8 +436,12 @@ class HMGame(object):
                     self.set_up_game()
                 elif self.progress.get('bear', False) and event.key == pygame.K_b:
                     self.set_up_game('bear')
-                elif self.progress.get('zebra', True) and event.key == pygame.K_z:  # TODO: swap True for False
+                elif self.progress.get('zebra', False) and event.key == pygame.K_z:
                     self.set_up_game('zebra')
+                elif self.progress.get('tiger', False) and event.key == pygame.K_t:
+                    self.set_up_game('tiger')
+                elif datetime.today().isoweekday() == 3 and event.key == pygame.K_f:
+                    self.set_up_game('frog')
 
             elif self.game_state == self.GameState.NUKE_CREDITS and (event.type == pygame.KEYDOWN or event.type == pygame.MOUSEBUTTONDOWN):
                 self.game_state = self.GameState.NUKE_MENU
@@ -415,7 +459,7 @@ class HMGame(object):
     def runtime_frame(self, mode='rooster'):
         sky_color = self.sky_color.return_color()
         inc = self.delta_time * 60 / 1000
-        if not self.sky_is_over:
+        if not self.sky_is_over and self.mask_sprite.dash_status != 'active':
             self.sky_color_surf.fill(sky_color)
         else:
             self.sky_color_foreground.fill(sky_color)
@@ -426,12 +470,12 @@ class HMGame(object):
         if mode == 'first':
             self.screen.blit(self.normal_sky_surf, (0, 0))
         else: #if mode == 'rooster':
-            if not self.sky_is_over:
+            if not self.sky_is_over and self.mask_sprite.dash_status != 'active':
                 self.screen.blit(self.sky_color_surf, (0, 0))
                 self.screen.blit(self.sky_surf, (0, 0))
 
-        score_surf = self.text_to_surface_mf(f'Score: {int(min(self.score, 137))}', True, (44+200*bool(self.kill_run or int(self.score) >= 110),
-                                                                                      44+200*bool(not self.kill_run and int(self.score) >= 110),
+        score_surf = self.text_to_surface_mf(f'Score: {int(min(self.score, 137))}', True, (44+200*bool(self.kills > 0 or int(self.score) >= 110),
+                                                                                      44+200*bool(not self.kills > 0 and int(self.score) >= 110),
                                                                                       44))
         score_rect = score_surf.get_rect(center=(400, 80))
         self.screen.blit(score_surf, score_rect)
@@ -450,6 +494,8 @@ class HMGame(object):
         self.pickups.update()
         self.pickups.draw(self.screen)
 
+        self.weapon_collision()
+
         self.draw_laser_sight()
         self.draw_shot_after_image()
         self.draw_out_of_bounds_marker()
@@ -461,29 +507,35 @@ class HMGame(object):
         self.difficulty_scaling()
         self.enter_the_sandman()
 
-        if self.score >= 137:
+        if self.score >= 137 and self.kills > 0:
             self.game_state = self.GameState.NUKE_START
+            self.progress['zebra'] = True
             self.music_handler.music_stop(1050)
             _color = self.sky_color.return_color()
             self.sky_color = ColorAbs(_color)
             self.screen.blit(self.ground_surf, (0, 300))
             self.animation_time = pygame.time.get_ticks()
-
             return
 
-        if self.enemy_collision():
+        elif self.score >= 137 and not self.kills > 0:
+            self.progress['tiger'] = True
+            # TODO: start pacifist ending
+
+        if self.mask_sprite.dash_status != 'active' \
+           and not (self.mask_sprite.dash_status == 'cooldown' and self.player_sprite.is_airborne()) \
+           and self.enemy_collision():
             if self.mask_sprite.deflect:
                 self.mask_sprite.deflect = False
                 self.mask_sprite.deflect_ability()
             else:
-                if self.game_state in [self.GameState.DEFAULT_GAME, self.GameState.BEAR_GAME, self.GameState.ZEBRA_GAME]:
+                if self.game_state in [self.GameState.DEFAULT_GAME, self.GameState.BEAR_GAME, self.GameState.ZEBRA_GAME, self.GameState.TIGER_GAME, self.GameState.FROG_GAME]:
                     self.game_state = self.GameState.DEFAULT_MENU
                 elif self.game_state == self.GameState.FIRST_GAME:
                     self.game_state = self.GameState.FIRST_MENU
         self.game_over()
 
-        if self.sky_is_over:
-            self.sky_color_foreground.set_alpha(int(self.score)-50)
+        if self.sky_is_over or self.mask_sprite.dash_status == 'active':
+            self.sky_color_foreground.set_alpha(max(int(self.score)-50, 60))
             self.ground_surf.set_alpha(max(365 - 3*int(self.score), 50))
             self.screen.blit(self.sky_color_foreground, (0, 0))
 
@@ -491,11 +543,17 @@ class HMGame(object):
         self.screen.fill(self.sky_color.return_color())
 
         self.screen.blit(self.player_menu, self.player_menu_rect)
-        self.screen.blit(self.wasted_surf, self.wasted_rect)
+        if datetime.today().isoweekday() == 3:
+            self.screen.blit(self.frog_menu, self.frog_menu_rect)
+        else:
+            self.screen.blit(self.wasted_surf, self.wasted_rect)
 
         score_line = f'Your score is {int(self.score)}'
         rooster_game_line = 'Press Y to continue'
-        bear_game_line = ''  # TODO: add zebra
+        bear_game_line = ''
+        zebra_game_line = ''
+        tiger_game_line = ''
+        frog_game_line = ''
         if int(self.score) <= 0:
             score_line = ''
             rooster_game_line = 'Press Y key to start'
@@ -503,16 +561,34 @@ class HMGame(object):
             rooster_game_line = 'Pacan k uspehoo shol (Y)'
         if self.progress.get('bear', False):
             bear_game_line = 'Press B to bear the unbearable'
+        if self.progress.get('zebra', False):
+            zebra_game_line = 'Press Z for zebra'
+        if self.progress.get('tiger', False):
+            tiger_game_line = 'Press T for tiger'
+        if datetime.today().isoweekday() == 3:
+            frog_game_line = 'Its Wednesday, ma dudes (F)'
 
         final_score_surf = self.text_to_surface_mf(score_line, True, 'Red')
         final_score_rect = final_score_surf.get_rect(center=(380, 100))
         rooster_game_surf = self.text_to_surface_mf(rooster_game_line, True, 'Red')
-        rooster_game_rect = rooster_game_surf.get_rect(midleft=(410, 250))
+        rooster_game_rect = rooster_game_surf.get_rect(midleft=(415, 250))
         bear_game_surf = self.text_to_surface_mf(bear_game_line, True, 'Red')
         bear_game_surf.set_alpha(120)
+        zebra_game_surf = self.text_to_surface_mf(zebra_game_line, True, 'Red')
+        zebra_game_rect = zebra_game_surf.get_rect(midleft=(415, 210))
+        tiger_game_surf = self.text_to_surface_mf(tiger_game_line, True, 'Red')
+        tiger_game_rect = tiger_game_surf.get_rect(midleft=(415, 290))
+        frog_game_surf = self.text_to_surface_mf(frog_game_line, True, 'Pink')
+        frog_game_rect = frog_game_surf.get_rect(midleft=(40, 20))
+
         self.screen.blit(final_score_surf, final_score_rect)
         self.screen.blit(rooster_game_surf, rooster_game_rect)
+        self.screen.blit(zebra_game_surf, zebra_game_rect)
+        self.screen.blit(tiger_game_surf, tiger_game_rect)
+        self.screen.blit(frog_game_surf, frog_game_rect)
+
         self.screen.blit(bear_game_surf, (50, 350))
+
         self.screen.blit(self.game_name_surf, (200, 40))
 
         inc = self.delta_time * 60 / 1000
@@ -582,8 +658,8 @@ class HMGame(object):
         self.screen.blit(self.sky_surf, (0, 0))
 
         score_surf = self.text_to_surface_mf(f'Score: {int(min(self.score, 137))}', True,
-                                             (44 + 200 * bool(self.kill_run or int(self.score) >= 110),
-                                              44 + 200 * bool(not self.kill_run and int(self.score) >= 110),
+                                             (44 + 200 * bool(self.kills > 0 or int(self.score) >= 110),
+                                              44 + 200 * bool(not self.kills > 0 and int(self.score) >= 110),
                                               44))
         if time_pass_ms < 2000:
             score_alpha = 255 - 255 * time_pass_ms // 2000
@@ -673,6 +749,14 @@ class HMGame(object):
             self.progress['deaths'] = self.progress.get('deaths', 0) + 1
             if self.progress['deaths'] > 6:
                 self.progress['bear'] = True
+            self.progress['kills'] = self.progress.get('kills', 0) + self.kills
+            if self.progress['kills'] > 100:
+                self.progress['tiger'] = True
+
+            new_save = dumps(self.progress)
+            with open('saves/save', mode='w') as file:
+                file.write(new_save)
+
 
             # print(self.player_sprite.rect.top - self.player_sprite.rect.bottom)
 
@@ -715,6 +799,31 @@ class HMGame(object):
         collisions = pygame.sprite.spritecollide(self.player_sprite, self.enemy_group, False)
         return bool(collisions)
 
+    def weapon_collision(self):
+        for weapon in self.player_attachments:
+            if isinstance(weapon, Punch) and self.mask_sprite.punch_status == 'active':
+                collisions = pygame.sprite.spritecollide(weapon, self.enemy_group, False)
+                if collisions:
+                    self.punch_sound.play()
+                for i in collisions:
+                    self.score_add(f'{i.get_type()}_kill')
+                    i.mask.kill()
+                    i.kill()
+
+            if not isinstance(weapon, Weapon):
+                continue
+            if weapon.speed == [0, 0]:
+                continue
+            collisions = pygame.sprite.spritecollide(weapon, self.enemy_group, False)
+            for i in collisions:
+                self.score_add(f'{i.get_type()}_kill')
+                i.mask.kill()
+                i.kill()
+
+            if collisions and self.mask_sprite.type_ not in ['tiger', 'frog']:
+                weapon.kill()
+                self.punch_sound.play()
+
     def aim_at_enemy(self):
         if bool(self.enemy_group.get_sprites_at(pygame.mouse.get_pos())):
             return pygame.mouse.get_pos()
@@ -727,8 +836,8 @@ class HMGame(object):
                 start_pos = (self.player_sprite.weapon.rect.right - 40, self.player_sprite.weapon.rect.centery - 2)
                 pygame.draw.line(self.screen, (240, 0, 0), start_pos, enemy_pos, 2)
 
-    def shoot_at_enemy(self):
-        return self.enemy_group.get_sprites_at(pygame.mouse.get_pos())
+    def shoot_at_enemy(self, event_pos):
+        return self.enemy_group.get_sprites_at(event_pos)
 
     def draw_shot_after_image(self):
         for index, i in enumerate(self.gunshot_afterimage):
@@ -753,16 +862,19 @@ class HMGame(object):
 
     def draw_tool_tips(self):
         match self.game_state:
-            case self.GameState.DEFAULT_GAME | self.GameState.BEAR_GAME | self.GameState.ZEBRA_GAME:
+            case self.GameState.DEFAULT_GAME | self.GameState.BEAR_GAME | self.GameState.ZEBRA_GAME | self.GameState.TIGER_GAME:
                 if int(self.score) < 20:
                     self.jump_tip.set_alpha(100-5*int(self.score))
                     self.move_tip.set_alpha(100-5*int(self.score))
-                    self.shoot_tup.set_alpha(100-5*int(self.score))
+                    self.shoot_tip.set_alpha(100 - 5 * int(self.score))
                     self.pickup_tip.set_alpha(100-5*int(self.score))
+                    self.dash_tip.set_alpha(100-5*int(self.score))
                     self.screen.blit(self.jump_tip, (620, 25))
                     self.screen.blit(self.move_tip, (620, 45))
-                    self.screen.blit(self.shoot_tup, (620, 65))
+                    self.screen.blit(self.shoot_tip, (620, 65))
                     self.screen.blit(self.pickup_tip, (620, 85))
+                    if self.game_state == self.GameState.ZEBRA_GAME:
+                        self.screen.blit(self.dash_tip, (620, 105))
             case self.GameState.FIRST_GAME:
                 if int(self.score) < 20:
                     self.jump_tip.set_alpha(100 - 5 * int(self.score))
@@ -785,7 +897,7 @@ class HMGame(object):
             self.screen.blit(self.ammo, (715, 335))
 
     def draw_jumps_count(self):
-        if not self.kill_run:
+        if not self.kills > 0:
             return None
         for i in range(self.player_sprite.max_jumps):
             if i < self.player_sprite.jumps:
@@ -795,20 +907,41 @@ class HMGame(object):
             self.screen.blit(_image, (20 + i*55, 330))
 
     def draw_spec_abilities(self):
-        if self.mask_sprite.bear_activation_time is not None and self.mask_sprite.bear_activation_time > 0:
+        if self.mask_sprite.type_ in ['bear', 'frog'] and self.mask_sprite.bear_activation_time is not None:
             self.mask_sprite.image.set_alpha(0)
             _alpha = int(255 * math.sin(1 + (600 - self.mask_sprite.bear_activation_time)/300))
             self.bear_banner.set_alpha(_alpha)
             self.mask_sprite.bear_activation_time -= self.delta_time
             self.screen.blit(self.bear_banner, (0, 0))
+            if self.mask_sprite.bear_activation_time < 0:
+                self.mask_sprite.bear_activation_time = None
         else:
             self.mask_sprite.bear_activation_time = None
-        # if self.game_state == self.BEAR_GAME and not self.mask_sprite.deflect:
 
+        if self.mask_sprite.type_ in ['zebra', 'frog']:
+            _dash_cd_text = ''
+            self.dash.set_alpha(255)
+            if self.mask_sprite.dash_status != 'ready':
+                _dash_cd_text = str(round(self.mask_sprite.dash_cd()/1000, 1))
+                self.dash.set_alpha(125)
+            _dash_cd_surf = self.text_to_surface_mf(_dash_cd_text, True, (255, 255, 255), size=60)
+            _dash_cd_rect = _dash_cd_surf.get_rect(center=(48, 60))
+            self.screen.blit(self.dash, (20, 30))
+            self.screen.blit(_dash_cd_surf, _dash_cd_rect)
 
+        if self.mask_sprite.type_ in ['tiger', 'frog'] and self.player_sprite.weapon is None:
+            _punch_cd_text = ''
+            self.punch.set_alpha(255)
+            if self.mask_sprite.punch_status != 'ready':
+                _punch_cd_text = str(round(self.mask_sprite.punch_cd()/1000, 1))
+                self.punch.set_alpha(125)
+            _punch_cd_surf = self.text_to_surface_mf(_punch_cd_text, True, (255, 255, 255), size=60)
+            _punch_cd_rect = _punch_cd_surf.get_rect(center=(710, 360))
+            self.screen.blit(self.punch, (685, 335))
+            self.screen.blit(_punch_cd_surf, _punch_cd_rect)
 
     def difficulty_scaling(self):
-        if self.kill_run and int(self.score) != self.last_rescale_score:
+        if self.kills > 0 and int(self.score) != self.last_rescale_score:
             self.ground_stiffness = GROUND_STIFFNESS * (131 - int(self.score))/137
 
             self.player_sprite.max_jumps = 1 + int(self.score)//30
@@ -828,19 +961,29 @@ class HMGame(object):
             self.last_rescale_score = int(self.score)
 
     def enter_the_sandman(self):
-        if not self.advanced_enemies and self.kill_run and int(self.score) >= 110:
+        if not self.advanced_enemies and self.kills > 0 and int(self.score) >= 110:
             if not self.advanced_enemies:
                 # self.sky_color_surf.set_alpha(0)
+                if self.game_state == self.GameState.TIGER_GAME:
+                    self.mask_sprite.image = self.tiger_mask_worn
                 self.kill_run_init_sound.play()
                 self.music_handler.music_play(self.enter_the_sandman_music)
             self.advanced_enemies = True
             self.sky_is_over = True  # I don't wanna see you go
+        elif self.progress.get('tiger', False) and not self.kills > 0 and int(self.score) >= 120:
+            self.enemy_spawn_interval = ENEMY_SPAWN_INTERVAL_MS - 650
+        elif not self.kills > 0 and int(self.score) >= 110:
+            self.enemy_spawn_interval = ENEMY_SPAWN_INTERVAL_MS - 500
 
     def text_to_surface_mf(self, text, antialias, color, bg=None, size=50):
         _font = pygame.font.Font(self.main_font, size)
         return _font.render(text, antialias, color, bg)
 
     def score_add(self, mode: str):
+        if mode.endswith('kill'):
+            if self.kills == 0:
+                self.kill_run_init_sound.play()
+            self.kills += 1
         if not self.progress.get('achieved 110', False) and not self.advanced_enemies:
             match mode:
                 case 'snail_kill':
@@ -848,22 +991,30 @@ class HMGame(object):
                 case 'fly_kill':
                     self.score += 3.0
                 case 'pass':
-                    self.score += 1
+                    self.score += 1.0
         elif self.progress.get('achieved 110', False) and not self.advanced_enemies:
-            if not self.advanced_enemies:
+            if self.score < 110:
                 match mode:
                     case 'snail_kill':
                         self.score += 3.9
                     case 'fly_kill':
                         self.score += 4.9
                     case 'pass':
-                        self.score += 2.9
+                        self.score += 3.2
+            else:
+                match mode:
+                    case 'snail_kill':
+                        self.score += 1.0
+                    case 'fly_kill':
+                        self.score += 1.0
+                    case 'pass':
+                        self.score += 0.6
         else:
             match mode:
                 case 'snail_kill':
-                    self.score += 0
+                    self.score += 0.0
                 case 'fly_kill':
-                    self.score += 1
+                    self.score += 1.0
                 case 'pass':
                     self.score += 0.25
 

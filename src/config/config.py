@@ -1,7 +1,7 @@
 from typing import Final
 
 SCREEN_RESOLUTION      : Final = (800, 400)
-DISPLAY_CAPTION        : Final = 'Obnova v0.0.0.2'
+DISPLAY_CAPTION        : Final = 'Obnova v0.0.0.3'
 
 GRAVITY_ACCELERATION   : Final = 4000
 GROUND_STIFFNESS       : Final = 4000

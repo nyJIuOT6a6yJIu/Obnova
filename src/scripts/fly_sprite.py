@@ -69,7 +69,7 @@ class Bat(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.center = [0.0, 0.0]
         self.speed = [0, 0]
-        self.t = 500
+        self.t = random.randint(1, 500)
         self.difficulty = 3
         self.phase_1 = random.randint(1, 250)
         self.phase_2 = random.randint(1, 125)
