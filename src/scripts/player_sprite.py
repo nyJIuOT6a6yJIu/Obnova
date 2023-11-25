@@ -74,7 +74,7 @@ class Player(pygame.sprite.Sprite):
             self.speed = [800 * (_speed/abs(_speed)), 0]
 
     def _movement(self):
-        if self.game.game_state == self.game.GameState.NUKE_START:
+        if self.game.game_state in [self.game.GameState.NUKE_START, self.game.GameState.NO_KILL_START]:
             self.speed[0] = 0
         gravity_acc = self.game.gravity_acceleration
         stiffness = self.game.ground_stiffness
@@ -139,7 +139,7 @@ class Player(pygame.sprite.Sprite):
             self.game.throw_sound.play()
 
     def _animate(self):
-        if self.game.game_state == self.game.GameState.NUKE_START:
+        if self.game.game_state in [self.game.GameState.NUKE_START, self.game.GameState.NO_KILL_START]:
             self.image = self.anim_frames[0]
             return
         if self.rect.bottom < 300:
@@ -243,6 +243,7 @@ class Mask(pygame.sprite.Sprite):
             return
         _now = pygame.time.get_ticks()
         _time_spent = _now - self.punch_used
+        _final = 160 + int(2.5 * self.body.game.score)
 
         if _time_spent < 40:
             self.punch_sprite.image = self.body.game.punch_frames[0]
@@ -252,9 +253,9 @@ class Mask(pygame.sprite.Sprite):
             self.punch_sprite.image = self.body.game.punch_frames[2]
         elif _time_spent < 120:
             self.punch_sprite.image = self.body.game.punch_frames[3]
-        elif _time_spent < 160:
+        elif _time_spent < _final:
             self.punch_sprite.image = self.body.game.punch_frames[4]
-        if _time_spent > 160:
+        if _time_spent > _final:
             self.punch_status = 'cooldown'
             self.punch_sprite.image = self.punch_sprite.default_image
         if self.punch_cd() <= 0:
@@ -344,4 +345,6 @@ class Weapon(pygame.sprite.Sprite):
         else:
             self.rect.bottom = 303 + 3*math.cos(self.t*math.pi/1100)
             self.t = (self.t + self.game.delta_time)%2200
+
+
 

@@ -48,7 +48,7 @@ class Fly(pygame.sprite.Sprite):
         self.image = self.anim_frames[int(self.anim_index)]
 
     def update(self):
-        if self.game.game_state != self.game.GameState.NUKE_START:
+        if self.game.game_state not in [self.game.GameState.NUKE_START, self.game.GameState.NO_KILL_START]:
             self._movement()
         self._animate()
 
@@ -117,7 +117,7 @@ class Bat(pygame.sprite.Sprite):
         self.image = self.anim_frames[int(self.anim_index)]
 
     def update(self):
-        if self.game.game_state != self.game.GameState.NUKE_START:
+        if self.game.game_state not in [self.game.GameState.NUKE_START, self.game.GameState.NO_KILL_START]:
             self._movement()
         self._animate()
 

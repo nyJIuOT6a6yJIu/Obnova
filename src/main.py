@@ -1,9 +1,8 @@
 # TODO:
 #  .
-#  - nuke animation with poroshenko (pacifist ending)
-#  - add post nuke credits
+#  add post nuke credits
 #  .
-#  - add more patterns for enemies (wednesday): frogs (snail) are slower but jump/lunge discard weapon on contact)
+#  - add more patterns for enemies (wednesday): frogs (snail) are slower but jump/lunge, on contact reverse controls for some time)
 #  .
 #  - (?) add enviromental hazards (enter the sand man)
 #  - (?) freeze pickup (розібратись з мікшером, щоб ставити музику на паузу)
@@ -24,6 +23,7 @@ import pygame
 
 from src.scripts.color_sine import ColorSine
 from src.scripts.abs_color import ColorAbs
+from src.scripts.misc_sprites import SunRay, SunGroup
 
 from src.scripts.player_sprite import Player, Mask, Weapon, Punch
 from src.scripts.fly_sprite import Fly, Bat
@@ -104,6 +104,9 @@ class HMGame(object):
         NUKE_CREDITS = auto()
         NUKE_MENU    = auto()
 
+        NO_KILL_START = auto()
+        NO_KILL_MENU  = auto()
+
     def __new__(cls, *args, **kwargs):
         if not hasattr(cls, 'instance'):
             cls.instance = super(HMGame, cls).__new__(cls)
@@ -178,6 +181,8 @@ class HMGame(object):
         self.enter_the_sandman_music.set_volume(0.8)
         self.nuke_music.set_volume(1.0)
         self.post_nuke_music.set_volume(0.6)
+        self.pacifist_speech.set_volume(3.0)
+        self.pacifist_menu_music.set_volume(0.5)
 
         self.enemy_spawn_timer = pygame.USEREVENT + 1
 
@@ -196,9 +201,15 @@ class HMGame(object):
 
         self.normal_sky_surf = pygame.image.load('src/graphics/Sky.png').convert_alpha()
 
-        self.sky_surf        = pygame.image.load('src/graphics/Sky_miami.png').convert_alpha()
-        self.ground_surf     = pygame.image.load('src/graphics/ground.png').convert()
+        self.sky_surf    = pygame.image.load('src/graphics/Sky_miami.png').convert_alpha()
+        self.ground_surf = pygame.image.load('src/graphics/ground.png').convert()
+
+        self.poroh        = pygame.image.load('src/graphics/poroh.png').convert_alpha()
+        self.poroh_banner = pygame.image.load('src/graphics/pacifist_banner.png').convert()
+        self.no_kill_menu = pygame.image.load('src/graphics/no_kill_menu.png').convert_alpha()
+
         self.wojaks          = pygame.image.load('src/graphics/wojaks.png').convert_alpha()
+        self.sun_ray         = pygame.image.load('src/graphics/sun_ray.png').convert_alpha()
         self.nuke_menu_palms = pygame.image.load('src/graphics/palms_bg.png').convert_alpha()
 
         self.player_walk_1 = pygame.image.load('src/graphics/Player/player_walk_1.png').convert_alpha()
@@ -257,6 +268,9 @@ class HMGame(object):
 
         self.menu_music      = pygame.mixer.Sound('src/audio/menu music/menu.mp3')
         self.post_nuke_music = pygame.mixer.Sound('src/audio/menu music/post_nuke_menu.mp3')
+
+        self.pacifist_speech = pygame.mixer.Sound('src/audio/misc sounds/pacifist_speech.mp3')
+        self.pacifist_menu_music = pygame.mixer.Sound('src/audio/misc music/pacifist_menu.mp3')
 
         self.screen.blit(pygame.image.load('src/graphics/loading_3.png'), (0, 0))
         pygame.display.update()
@@ -368,6 +382,7 @@ class HMGame(object):
         elif mode == 'frog':
             _music = random.choice([self.menu_music, self.run_music_1, self.bear_music, self.zebra_music, self.tiger_music])
             self.music_handler.music_play(_music)
+
     def game_loop(self):
         while self.game_state != self.GameState.EXIT:
             self.last_time_frame = pygame.time.get_ticks()
@@ -379,6 +394,10 @@ class HMGame(object):
                     self.post_nuke_credits()
                 case self.GameState.NUKE_MENU:
                     self.menu_frame_nuke()
+                case self.GameState.NO_KILL_START:
+                    self.pacifist_animation()
+                case self.GameState.NO_KILL_MENU:
+                    self.pacifist_menu()
                 case self.GameState.DEFAULT_GAME | self.GameState.BEAR_GAME | \
                      self.GameState.ZEBRA_GAME | self.GameState.TIGER_GAME | self.GameState.FROG_GAME:
                     self.runtime_frame()
@@ -430,7 +449,7 @@ class HMGame(object):
                     pygame.time.set_timer(self.enemy_spawn_timer, self.enemy_spawn_interval, 1)
 
 
-            elif self.game_state in [self.GameState.FIRST_MENU, self.GameState.DEFAULT_MENU, self.GameState.NUKE_MENU] \
+            elif self.game_state in [self.GameState.FIRST_MENU, self.GameState.DEFAULT_MENU, self.GameState.NUKE_MENU, self.GameState.NO_KILL_MENU] \
                     and event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_y:
                     self.set_up_game()
@@ -445,6 +464,7 @@ class HMGame(object):
 
             elif self.game_state == self.GameState.NUKE_CREDITS and (event.type == pygame.KEYDOWN or event.type == pygame.MOUSEBUTTONDOWN):
                 self.game_state = self.GameState.NUKE_MENU
+                self.progress['zebra'] = True
                 _color = self.sky_color.return_color()
                 _color = (pygame.math.clamp(_color[0], 179, 229),
                           pygame.math.clamp(_color[1], 77, 229),
@@ -509,17 +529,28 @@ class HMGame(object):
 
         if self.score >= 137 and self.kills > 0:
             self.game_state = self.GameState.NUKE_START
-            self.progress['zebra'] = True
             self.music_handler.music_stop(1050)
             _color = self.sky_color.return_color()
+
             self.sky_color = ColorAbs(_color)
             self.screen.blit(self.ground_surf, (0, 300))
             self.animation_time = pygame.time.get_ticks()
+            self.sunrays = SunGroup(self)#, self.animation_time)
             return
 
         elif self.score >= 137 and not self.kills > 0:
             self.progress['tiger'] = True
-            # TODO: start pacifist ending
+            self.game_state = self.GameState.NO_KILL_START
+            self.music_handler.music_stop(550)
+            self.poroh_banner.set_alpha(255)
+            self.mask_sprite.image.set_alpha(0)
+            for i in self.enemy_group:
+                i.mask_bool = False
+            self.kill_run_init_sound.play()
+            self.pacifist_speech.play()
+
+            # self.screen.blit(self.ground_surf, (0, 300))
+            self.animation_time = pygame.time.get_ticks()
 
         if self.mask_sprite.dash_status != 'active' \
            and not (self.mask_sprite.dash_status == 'cooldown' and self.player_sprite.is_airborne()) \
@@ -653,8 +684,12 @@ class HMGame(object):
                 radius = -20 + 145 * round(math.log(time_pass_ms/1000 - 4.7, 10.3), 2)
             else:
                 radius = 0
+            # print(time_pass_ms)
+            self.sunrays.update(time_pass_ms)
+            self.sunrays.draw(self.screen)
             pygame.draw.circle(self.screen, 'White', (365, 170), radius, draw_top_right=True, draw_top_left=True, draw_bottom_left=True)
             self.screen.blit(self.ground_surf, (0, 300))
+
         self.screen.blit(self.sky_surf, (0, 0))
 
         score_surf = self.text_to_surface_mf(f'Score: {int(min(self.score, 137))}', True,
@@ -691,7 +726,8 @@ class HMGame(object):
             self.sky_color_foreground.set_alpha(alpha_)
             self.wojaks.set_alpha(w_alpha_)
             self.screen.blit(self.ground_surf, (0, 300))
-            self.screen.blit(self.wojaks, (0, 0))
+            if not self.progress.get('zebra', False):
+                self.screen.blit(self.wojaks, (0, 0))
             self.screen.blit(self.sky_color_foreground, (0, 0))
 
         if time_pass_ms > 18700:
@@ -728,10 +764,73 @@ class HMGame(object):
             self.sky_color.increment(inc)
 
         if time_pass_ms > 230300:
+            self.progress['zebra'] = True
             self.game_state = self.GameState.NUKE_MENU
             self.sky_color.red, self.sky_color.green, self.sky_color.blue = 0, 0, 0
             self.music_handler.music_play(self.post_nuke_music)
         #  random credit generation
+
+    def pacifist_animation(self):
+        time_pass_ms = pygame.time.get_ticks() - self.animation_time
+
+        self.screen.blit(self.normal_sky_surf, (0, 0))
+
+        self.screen.blit(self.ground_surf, (0, 300))
+
+        score_surf = self.text_to_surface_mf(f'Score: {int(min(self.score, 137))}', True, (255, 0, 250))
+
+        score_rect = score_surf.get_rect(center=(400, 80))
+        self.screen.blit(score_surf, score_rect)
+
+        self.player.update()
+        self.player_attachments.update()
+        self.player.draw(self.screen)
+        self.player_attachments.draw(self.screen)
+
+        self.enemy_group.update()
+        self.enemy_group.draw(self.screen)
+
+        self.enemy_attachments.update()
+        self.enemy_attachments.draw(self.screen)
+
+        self.pickups.draw(self.screen)
+
+        self.screen.blit(self.poroh, (650, 50))
+
+        if time_pass_ms < 1200:
+            if time_pass_ms < 600:
+                _alpha = 255
+            else:
+                _alpha = int(255 * math.sin((1200-time_pass_ms)/400))
+            self.poroh_banner.set_alpha(_alpha)
+
+            self.screen.blit(self.poroh_banner, (0, 0))
+
+        if time_pass_ms > 10700:
+            self.game_state = self.GameState.NO_KILL_MENU
+            self.progress['color_blind_unlocked'] = True
+            self.music_handler.music_play(self.pacifist_menu_music)
+
+    def pacifist_menu(self):
+        _color = self.sky_color.return_color()
+
+        self.screen.fill(_color)
+        self.screen.blit(self.no_kill_menu, (0, 0))
+
+        new_game_line = 'Good Ending!'
+        new_game_surf = self.text_to_surface_mf(new_game_line, True, (255, 0, 250), size=65)
+        new_game_rect = new_game_surf.get_rect(center=(400, 50))
+
+        self.screen.blit(new_game_surf, new_game_rect)
+
+        new_game_line = 'World Peace!!'
+        new_game_surf = self.text_to_surface_mf(new_game_line, True, (255, 0, 250), size=65)
+        new_game_rect = new_game_surf.get_rect(center=(400, 350))
+
+        self.screen.blit(new_game_surf, new_game_rect)
+
+        inc = self.delta_time * 60 / 4000
+        self.sky_color.increment(inc)
 
     def game_over(self):
         if self.game_state in [self.GameState.FIRST_MENU, self.GameState.DEFAULT_MENU]:
@@ -971,7 +1070,7 @@ class HMGame(object):
             self.advanced_enemies = True
             self.sky_is_over = True  # I don't wanna see you go
         elif self.progress.get('tiger', False) and not self.kills > 0 and int(self.score) >= 120:
-            self.enemy_spawn_interval = ENEMY_SPAWN_INTERVAL_MS - 650
+            self.enemy_spawn_interval = ENEMY_SPAWN_INTERVAL_MS - 630
         elif not self.kills > 0 and int(self.score) >= 110:
             self.enemy_spawn_interval = ENEMY_SPAWN_INTERVAL_MS - 500
 
@@ -1009,6 +1108,8 @@ class HMGame(object):
                         self.score += 1.0
                     case 'pass':
                         self.score += 0.6
+                        if self.progress.get('color_blind_unlocked', False) is False:
+                            self.score += self.progress.get('deaths', 0) / 100
         else:
             match mode:
                 case 'snail_kill':
@@ -1017,6 +1118,8 @@ class HMGame(object):
                     self.score += 1.0
                 case 'pass':
                     self.score += 0.25
+                    if self.progress.get('zebra', False):
+                        self.score += self.progress.get('deaths', 0)/100
 
 if __name__ == '__main__':
     pass

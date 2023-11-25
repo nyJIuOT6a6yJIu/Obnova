@@ -8,7 +8,7 @@ from src.config.config import SCREEN_RESOLUTION
 try:
     with open('saves/save') as file:
         progress = loads(file.read())
-except FileNotFoundError:
+except:  # ловлю всі ерори і мені похуй абсолютно
     progress = None
 
 screen = pygame.display.set_mode(SCREEN_RESOLUTION)
