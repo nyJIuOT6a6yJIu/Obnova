@@ -12,7 +12,7 @@ except:  # ловлю всі ерори і мені похуй абсолютн�
     progress = None
 
 screen = pygame.display.set_mode(SCREEN_RESOLUTION)
-screen.blit(pygame.image.load('src/graphics/loading_1.png'), (0, 0))
+screen.blit(pygame.image.load('src/graphics/banners/loading_1.png'), (0, 0))
 pygame.display.update()
 
 game = HMGame(screen, progress)

@@ -151,3 +151,20 @@ class ChamMask(pygame.sprite.Sprite):
 
     def update(self):
         self.rect.bottomleft = (self.body.rect.bottomleft[0] - 5, self.body.rect.bottomleft[1])
+
+
+class Stomped_Snail(pygame.sprite.Sprite):
+    def __init__(self, game, pos):
+        super().__init__()
+        self.game = game
+        self.pos = pos
+        self.time = 4000
+        self.ref_image = self.game.stomped_enemy
+        self.image = pygame.transform.rotate(self.ref_image, 0.0)
+        self.rect = self.image.get_rect(midbottom=pos)
+
+    def update(self):
+        self.image.set_alpha(int(pygame.math.clamp(self.time//10, 0, 255)))
+        self.time -= self.game.delta_time
+        if self.time < 0:
+            self.kill()

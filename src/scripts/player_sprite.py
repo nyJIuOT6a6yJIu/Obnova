@@ -3,6 +3,8 @@ import random
 
 import pygame
 
+from src.config.config import STOMP_SPEED
+
 
 class Player(pygame.sprite.Sprite):
     def __init__(self, game):
@@ -94,10 +96,12 @@ class Player(pygame.sprite.Sprite):
 
         if not self.is_airborne():
             self.rect.bottom = 300
+            if self.mask.type_ in ['tiger', 'frog'] and self.speed[1] > STOMP_SPEED:
+                self.game.stomp_sound.play()
             self.speed[1] = 0
             self.jumps = self.max_jumps
         elif self.mask.dash_status != 'active':
-            self.speed[1] += gravity_acc * self.game.delta_time / 2000
+            self.speed[1] += gravity_acc * self.game.delta_time / 2000 # 1300 - stomp limit
 
         if self.rect.left < 0:
             self.rect.left = 0
@@ -176,6 +180,11 @@ class Mask(pygame.sprite.Sprite):
         self.punch_sprite = Punch(_player)
         _player.game.player_attachments.add(self.punch_sprite)
 
+        self.stomp_sprite = Stomp(_player)
+        _player.game.player_attachments.add(self.stomp_sprite)
+        _player.game.player_attachments.change_layer(self.stomp_sprite, 1)
+        self.stomps = 0
+
         if mask == 'rooster':
             self.image = pygame.transform.scale(_player.game.rooster_mask, (90, 95))
         elif mask == 'bear':
@@ -244,16 +253,17 @@ class Mask(pygame.sprite.Sprite):
         _now = pygame.time.get_ticks()
         _time_spent = _now - self.punch_used
         _final = 160 + int(2.5 * self.body.game.score)
+        _time_by_punch = _time_spent % 160
 
-        if _time_spent < 40:
+        if _time_by_punch < 40:
             self.punch_sprite.image = self.body.game.punch_frames[0]
-        elif _time_spent < 60:
+        elif _time_by_punch < 60:
             self.punch_sprite.image = self.body.game.punch_frames[1]
-        elif _time_spent < 100:
+        elif _time_by_punch < 100:
             self.punch_sprite.image = self.body.game.punch_frames[2]
-        elif _time_spent < 120:
+        elif _time_by_punch < 120:
             self.punch_sprite.image = self.body.game.punch_frames[3]
-        elif _time_spent < _final:
+        elif _time_by_punch < 160:
             self.punch_sprite.image = self.body.game.punch_frames[4]
         if _time_spent > _final:
             self.punch_status = 'cooldown'
@@ -293,6 +303,25 @@ class Punch(pygame.sprite.Sprite):
 
     def update(self):
         self.rect.midleft = self.body.rect.midright
+
+class Stomp(pygame.sprite.Sprite):
+    def __init__(self, body):
+        super().__init__()
+
+        self.image = body.game.stomp_image
+        self.image.set_alpha(0)
+        self.rect = self.image.get_rect()
+        self.body = body
+
+    def update(self):
+        if self.body.speed[1] > STOMP_SPEED:
+            _alpha = int(80 + (self.body.speed[1] - STOMP_SPEED)/5)
+            pygame.math.clamp(_alpha, 80, 255)
+            self.image.set_alpha(_alpha)
+        else:
+            self.image.set_alpha(0)
+        self.rect.midbottom = [self.body.rect.centerx, self.body.rect.bottom+10]
+
 
 class Weapon(pygame.sprite.Sprite):
     def __init__(self, game, pos=None):

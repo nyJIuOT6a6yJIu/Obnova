@@ -2,14 +2,16 @@
 #  .
 #  add post nuke credits
 #  .
-#  - add more patterns for enemies (wednesday): frogs (snail) are slower but jump/lunge, on contact reverse controls for some time)
+#  add more patterns for enemies (wednesday): frogs (snail) are slower but jump/lunge, on contact reverse controls for some time)
 #  .
 #  - (?) add enviromental hazards (enter the sand man)
 #  - (?) freeze pickup (розібратись з мікшером, щоб ставити музику на паузу)
 #  .
-#  - add white-black bad apple after tiger run
+#  - add white-black bad apple after pacifist
 #  - endless run after tiger run
 #  - add sralker after bad apple run
+#  .
+#  displace loading screens more evenly
 #  .
 #  - introduce speed limit (so that game wont crush)
 
@@ -25,11 +27,12 @@ from src.scripts.color_sine import ColorSine
 from src.scripts.abs_color import ColorAbs
 from src.scripts.misc_sprites import SunRay, SunGroup
 
-from src.scripts.player_sprite import Player, Mask, Weapon, Punch
+from src.scripts.player_sprite import Player, Mask, Weapon, Punch, Stomp
 from src.scripts.fly_sprite import Fly, Bat
-from src.scripts.snail_sprite import Snail, Cham
+from src.scripts.snail_sprite import Snail, Cham, Stomped_Snail
 
 from src.config.config import DISPLAY_CAPTION,\
+                              STOMP_SPEED,\
                               GRAVITY_ACCELERATION,\
                               GROUND_STIFFNESS,\
                               ENEMY_SPAWN_INTERVAL_MS,\
@@ -153,7 +156,7 @@ class HMGame(object):
         self.wasted_surf = self.text_to_surface_mf('[REDACTED]', True, 'White', 'Black', 48)
         self.wasted_rect = self.wasted_surf.get_rect(center=(179, 181))
 
-        self.screen.blit(pygame.image.load('src/graphics/loading_2.png'), (0, 0))
+        self.screen.blit(pygame.image.load('src/graphics/banners/loading_2.png'), (0, 0))
         pygame.display.update()
 
         self.load_sounds()
@@ -166,21 +169,36 @@ class HMGame(object):
         self.throw_sound.set_volume(4.5)
         self.swing_sound.set_volume(3.0)
         self.punch_sound.set_volume(4.0)
+        self.stomp_sound.set_volume(4.0)
 
         self.kill_run_init_sound.set_volume(1.5)
+
         self.death_sound.set_volume(1.3)
         self.death_sound_2.set_volume(1.3)
         self.death_sound_3.set_volume(6)
-        self.death_sound_4.set_volume(1.3)
+        self.death_sound_4.set_volume(2.3)
+
+        self.first_run_music.set_volume(0.2)
 
         self.run_music_1.set_volume(0.3)
+        self.run_music_2.set_volume(0.3)
+        self.run_music_3.set_volume(0.3)
+
         self.bear_music.set_volume(0.4)
         self.zebra_music.set_volume(0.4)
         self.tiger_music.set_volume(0.8)
+
+        self.post_bear_music.set_volume(0.4)
+        self.post_zebra_music.set_volume(0.4)
+        self.post_tiger_music.set_volume(0.4)
+
         self.menu_music.set_volume(0.2)
+
         self.enter_the_sandman_music.set_volume(0.8)
+
         self.nuke_music.set_volume(1.0)
         self.post_nuke_music.set_volume(0.6)
+
         self.pacifist_speech.set_volume(3.0)
         self.pacifist_menu_music.set_volume(0.5)
 
@@ -189,7 +207,7 @@ class HMGame(object):
         self.score = -1
         self.delta_time = 1
 
-        if not self.progress:
+        if self.progress.get('deaths', 0) == 0:
             self.set_up_game('first')
         else:
             self.game_state = self.GameState.DEFAULT_MENU
@@ -199,18 +217,18 @@ class HMGame(object):
 
     def load_images(self):
 
-        self.normal_sky_surf = pygame.image.load('src/graphics/Sky.png').convert_alpha()
+        self.normal_sky_surf = pygame.image.load('src/graphics/background/Sky.png').convert_alpha()
 
-        self.sky_surf    = pygame.image.load('src/graphics/Sky_miami.png').convert_alpha()
-        self.ground_surf = pygame.image.load('src/graphics/ground.png').convert()
+        self.sky_surf    = pygame.image.load('src/graphics/background/Sky_miami.png').convert_alpha()
+        self.ground_surf = pygame.image.load('src/graphics/background/ground.png').convert()
 
-        self.poroh        = pygame.image.load('src/graphics/poroh.png').convert_alpha()
-        self.poroh_banner = pygame.image.load('src/graphics/pacifist_banner.png').convert()
-        self.no_kill_menu = pygame.image.load('src/graphics/no_kill_menu.png').convert_alpha()
+        self.poroh        = pygame.image.load('src/graphics/misc/poroh.png').convert_alpha()
+        self.poroh_banner = pygame.image.load('src/graphics/banners/pacifist_banner.png').convert()
+        self.no_kill_menu = pygame.image.load('src/graphics/background/no_kill_menu.png').convert_alpha()
 
-        self.wojaks          = pygame.image.load('src/graphics/wojaks.png').convert_alpha()
-        self.sun_ray         = pygame.image.load('src/graphics/sun_ray.png').convert_alpha()
-        self.nuke_menu_palms = pygame.image.load('src/graphics/palms_bg.png').convert_alpha()
+        self.wojaks          = pygame.image.load('src/graphics/misc/wojaks.png').convert_alpha()
+        self.sun_ray         = pygame.image.load('src/graphics/misc/sun_ray.png').convert_alpha()
+        self.nuke_menu_palms = pygame.image.load('src/graphics/background/palms_bg.png').convert_alpha()
 
         self.player_walk_1 = pygame.image.load('src/graphics/Player/player_walk_1.png').convert_alpha()
         self.player_walk_2 = pygame.image.load('src/graphics/Player/player_walk_2.png').convert_alpha()
@@ -221,7 +239,7 @@ class HMGame(object):
         self.rooster_mask = pygame.image.load('src/graphics/Player/rooster.png').convert_alpha()
 
         self.bear_mask   = pygame.image.load('src/graphics/Player/bear.png').convert_alpha()
-        self.bear_banner = pygame.image.load('src/graphics/do_you_know_this_man.png').convert()
+        self.bear_banner = pygame.image.load('src/graphics/banners/do_you_know_this_man.png').convert()
 
         self.zebra_mask = pygame.image.load('src/graphics/Player/zebra.png').convert_alpha()
 
@@ -239,12 +257,15 @@ class HMGame(object):
         for frame in self.punch_frames:
             frame.set_alpha(100)
 
-        self.weapon   = pygame.image.load('src/graphics/GUN.png').convert_alpha()
-        self.ammo     = pygame.transform.scale(pygame.image.load('src/graphics/ammo.png').convert_alpha(), (50, 50))
-        self.jump_on  = pygame.transform.scale(pygame.image.load('src/graphics/jump_on.png').convert_alpha(), (50, 50))
-        self.jump_off = pygame.transform.scale(pygame.image.load('src/graphics/jump_off.png').convert_alpha(), (50, 50))
-        self.dash     = pygame.transform.scale(pygame.image.load('src/graphics/dash.png').convert_alpha(), (50, 50))
-        self.punch    = pygame.transform.scale(pygame.image.load('src/graphics/punch.png').convert_alpha(), (50, 50))
+        self.stomp_image   = pygame.image.load('src/graphics/Player/stomp.png').convert_alpha()
+        self.stomped_enemy = pygame.image.load('src/graphics/snail/stomped.png').convert_alpha()
+
+        self.weapon   = pygame.image.load('src/graphics/Player/GUN.png').convert_alpha()
+        self.ammo     = pygame.transform.scale(pygame.image.load('src/graphics/icons/ammo.png').convert_alpha(), (50, 50))
+        self.jump_on  = pygame.transform.scale(pygame.image.load('src/graphics/icons/jump_on.png').convert_alpha(), (50, 50))
+        self.jump_off = pygame.transform.scale(pygame.image.load('src/graphics/icons/jump_off.png').convert_alpha(), (50, 50))
+        self.dash     = pygame.transform.scale(pygame.image.load('src/graphics/icons/dash.png').convert_alpha(), (50, 50))
+        self.punch    = pygame.transform.scale(pygame.image.load('src/graphics/icons/punch.png').convert_alpha(), (50, 50))
 
         self.fly_1    = pygame.image.load('src/graphics/fly/Fly1.png').convert_alpha()
         self.fly_2    = pygame.image.load('src/graphics/fly/Fly2.png').convert_alpha()
@@ -258,7 +279,7 @@ class HMGame(object):
         self.cham_2     = pygame.image.load('src/graphics/snail/cham2.png').convert_alpha()
         self.cham_mask  = pygame.image.load('src/graphics/snail/cham.png').convert_alpha()
 
-        self.oob_pointer = pygame.image.load('src/graphics/oob_pointer.png').convert_alpha()
+        self.oob_pointer = pygame.image.load('src/graphics/icons/oob_pointer.png').convert_alpha()
 
     def load_sounds(self):
         self.death_sound     = pygame.mixer.Sound('src/audio/death sounds/death.mp3')
@@ -270,15 +291,24 @@ class HMGame(object):
         self.post_nuke_music = pygame.mixer.Sound('src/audio/menu music/post_nuke_menu.mp3')
 
         self.pacifist_speech = pygame.mixer.Sound('src/audio/misc sounds/pacifist_speech.mp3')
-        self.pacifist_menu_music = pygame.mixer.Sound('src/audio/misc music/pacifist_menu.mp3')
+        self.pacifist_menu_music = pygame.mixer.Sound('src/audio/menu music/pacifist_menu.mp3')
 
-        self.screen.blit(pygame.image.load('src/graphics/loading_3.png'), (0, 0))
+        self.screen.blit(pygame.image.load('src/graphics/banners/loading_3.png'), (0, 0))
         pygame.display.update()
 
+        self.first_run_music = pygame.mixer.Sound('src/audio/run music/first_run_music.mp3')
+
         self.run_music_1 = pygame.mixer.Sound('src/audio/run music/run_music1.mp3')
+        self.run_music_2 = pygame.mixer.Sound('src/audio/run music/run_music2.mp3')
+        self.run_music_3 = pygame.mixer.Sound('src/audio/run music/run_music3.mp3')
+
         self.bear_music  = pygame.mixer.Sound('src/audio/run music/bear_run_music.mp3')
         self.zebra_music = pygame.mixer.Sound('src/audio/run music/zebra_run_music.mp3')
         self.tiger_music = pygame.mixer.Sound('src/audio/run music/tiger_run_music.mp3')
+
+        self.post_bear_music  = pygame.mixer.Sound('src/audio/run music/post_bear_music.mp3')
+        self.post_zebra_music = pygame.mixer.Sound('src/audio/run music/post_zebra_music.mp3')
+        self.post_tiger_music = pygame.mixer.Sound('src/audio/run music/post_tiger_music.mp3')
 
         self.enter_the_sandman_music = pygame.mixer.Sound('src/audio/boss music/enter_the_sandman.mp3')
 
@@ -291,6 +321,42 @@ class HMGame(object):
         self.throw_sound         = pygame.mixer.Sound('src/audio/misc sounds/throw.mp3')
         self.swing_sound         = pygame.mixer.Sound('src/audio/misc sounds/swing.mp3')
         self.punch_sound         = pygame.mixer.Sound('src/audio/misc sounds/punch.mp3')
+        self.stomp_sound         = pygame.mixer.Sound('src/audio/misc sounds/stomp.mp3')
+
+    def choose_music(self, mode):
+        music_ = [None]
+        if mode == 'first':
+            return self.music_handler.music_play(self.first_run_music)
+        match mode:
+            case 'rooster':
+                music_ = [self.run_music_1]
+            case 'bear':
+                music_ = [self.bear_music]
+            case 'zebra':
+                music_ = [self.zebra_music]
+            case 'tiger':
+                music_ = [self.tiger_music]
+            case 'frog':
+                music_ = [None, self.run_music_1, self.bear_music, self.zebra_music, self.tiger_music]
+
+        if self.progress.get(f"{mode}_played", False):
+            if self.progress.get('rooster_finished', False):
+                music_.extend([self.run_music_2, self.run_music_3])
+            if self.progress.get('bear_finished', False):
+                music_.append(self.post_bear_music)
+            if self.progress.get('zebra_finished', False):
+                music_.append(self.post_zebra_music)
+            if self.progress.get('tiger_finished', False):
+                music_.append(self.post_tiger_music)
+            if self.progress.get('frog_finished', False):
+                music_.append(self.first_run_music)
+
+        choice_ = random.choice(music_)
+
+        if choice_ is not None:
+            self.music_handler.music_play(choice_)
+        elif self.music_handler.current_track is not self.menu_music:
+            self.music_handler.music_play(self.menu_music)
 
     def set_up_game(self, mode='rooster'):
         self.max_ammo = MAX_AMMO_CAPACITY
@@ -369,19 +435,9 @@ class HMGame(object):
         self.sky_color_foreground.set_alpha(0)
         # self.kill_run = False
 
-        if mode == 'first':
-            self.music_handler.music_play(self.menu_music)
-        elif mode == 'rooster':
-            self.music_handler.music_play(self.run_music_1)
-        elif mode == 'bear':
-            self.music_handler.music_play(self.bear_music)
-        elif mode == 'zebra':
-            self.music_handler.music_play(self.zebra_music)
-        elif mode == 'tiger':
-            self.music_handler.music_play(self.tiger_music)
-        elif mode == 'frog':
-            _music = random.choice([self.menu_music, self.run_music_1, self.bear_music, self.zebra_music, self.tiger_music])
-            self.music_handler.music_play(_music)
+        self.choose_music(mode)
+
+        self.progress[f"{mode}_played"] = True
 
     def game_loop(self):
         while self.game_state != self.GameState.EXIT:
@@ -527,30 +583,34 @@ class HMGame(object):
         self.difficulty_scaling()
         self.enter_the_sandman()
 
-        if self.score >= 137 and self.kills > 0:
-            self.game_state = self.GameState.NUKE_START
-            self.music_handler.music_stop(1050)
-            _color = self.sky_color.return_color()
+        if self.score >= 137:
+            string_ = f"{self.mask_sprite.type_}_finished"
+            self.progress[string_] = True
 
-            self.sky_color = ColorAbs(_color)
-            self.screen.blit(self.ground_surf, (0, 300))
-            self.animation_time = pygame.time.get_ticks()
-            self.sunrays = SunGroup(self)#, self.animation_time)
-            return
+            if self.kills > 0:
+                self.game_state = self.GameState.NUKE_START
+                self.music_handler.music_stop(1050)
+                _color = self.sky_color.return_color()
 
-        elif self.score >= 137 and not self.kills > 0:
-            self.progress['tiger'] = True
-            self.game_state = self.GameState.NO_KILL_START
-            self.music_handler.music_stop(550)
-            self.poroh_banner.set_alpha(255)
-            self.mask_sprite.image.set_alpha(0)
-            for i in self.enemy_group:
-                i.mask_bool = False
-            self.kill_run_init_sound.play()
-            self.pacifist_speech.play()
+                self.sky_color = ColorAbs(_color)
+                self.screen.blit(self.ground_surf, (0, 300))
+                self.animation_time = pygame.time.get_ticks()
+                self.sunrays = SunGroup(self)#, self.animation_time)
+                return
 
-            # self.screen.blit(self.ground_surf, (0, 300))
-            self.animation_time = pygame.time.get_ticks()
+            else:
+                self.progress['tiger'] = True
+                self.game_state = self.GameState.NO_KILL_START
+                self.music_handler.music_stop(550)
+                self.poroh_banner.set_alpha(255)
+                self.mask_sprite.image.set_alpha(0)
+                for i in self.enemy_group:
+                    i.mask_bool = False
+                self.kill_run_init_sound.play()
+                self.pacifist_speech.play()
+
+                # self.screen.blit(self.ground_surf, (0, 300))
+                self.animation_time = pygame.time.get_ticks()
 
         if self.mask_sprite.dash_status != 'active' \
            and not (self.mask_sprite.dash_status == 'cooldown' and self.player_sprite.is_airborne()) \
@@ -678,6 +738,7 @@ class HMGame(object):
             self.advanced_enemies = False
             self.sky_color_foreground.fill('White')
             self.music_handler.music_play(self.nuke_music)
+            self.ground_surf.set_alpha(255)
 
         if a is True:
             if time_pass_ms > 5700:
@@ -688,7 +749,8 @@ class HMGame(object):
             self.sunrays.update(time_pass_ms)
             self.sunrays.draw(self.screen)
             pygame.draw.circle(self.screen, 'White', (365, 170), radius, draw_top_right=True, draw_top_left=True, draw_bottom_left=True)
-            self.screen.blit(self.ground_surf, (0, 300))
+
+        self.screen.blit(self.ground_surf, (0, 300))
 
         self.screen.blit(self.sky_surf, (0, 0))
 
@@ -725,7 +787,7 @@ class HMGame(object):
             w_alpha_ = 70 * (time_pass_ms - 10000) // 4000
             self.sky_color_foreground.set_alpha(alpha_)
             self.wojaks.set_alpha(w_alpha_)
-            self.screen.blit(self.ground_surf, (0, 300))
+            # self.screen.blit(self.ground_surf, (0, 300))
             if not self.progress.get('zebra', False):
                 self.screen.blit(self.wojaks, (0, 0))
             self.screen.blit(self.sky_color_foreground, (0, 0))
@@ -909,6 +971,20 @@ class HMGame(object):
                     i.mask.kill()
                     i.kill()
 
+            if isinstance(weapon, Stomp) and self.mask_sprite.type_ in ['tiger', 'frog'] \
+                and self.player_sprite.speed[1] > STOMP_SPEED:
+                collisions = pygame.sprite.spritecollide(weapon, self.enemy_group, False)
+                for i in collisions:
+                    self.score_add(f'{i.get_type()}_kill')
+                    self.mask_sprite.punch_status = 'cooldown'
+                    self.mask_sprite.punch_used = pygame.time.get_ticks() - 165 - int(2.5 * self.score)
+                    if isinstance(i, Snail):
+                        self.enemy_attachments.add(Stomped_Snail(self, [self.player_sprite.rect.centerx, 300]))
+                    i.mask.kill()
+                    i.kill()
+
+                    self.mask_sprite.stomps += 1
+
             if not isinstance(weapon, Weapon):
                 continue
             if weapon.speed == [0, 0]:
@@ -1043,7 +1119,7 @@ class HMGame(object):
         if self.kills > 0 and int(self.score) != self.last_rescale_score:
             self.ground_stiffness = GROUND_STIFFNESS * (131 - int(self.score))/137
 
-            self.player_sprite.max_jumps = 1 + int(self.score)//30
+            self.player_sprite.max_jumps = 1 + int(self.score)//(30 + 5*self.mask_sprite.stomps)
 
             self.max_ammo = MAX_AMMO_CAPACITY - int(self.score)//6
             self.pickup_rate = PICKUP_DROP_RATE - int(self.score)//10
@@ -1109,7 +1185,7 @@ class HMGame(object):
                     case 'pass':
                         self.score += 0.6
                         if self.progress.get('color_blind_unlocked', False) is False:
-                            self.score += self.progress.get('deaths', 0) / 100
+                            self.score += self.progress.get('deaths', 0) / 50
         else:
             match mode:
                 case 'snail_kill':
@@ -1118,8 +1194,8 @@ class HMGame(object):
                     self.score += 1.0
                 case 'pass':
                     self.score += 0.25
-                    if self.progress.get('zebra', False):
-                        self.score += self.progress.get('deaths', 0)/100
+                    if self.progress.get('zebra', False) is False:
+                        self.score += self.progress.get('deaths', 0)/50
 
 if __name__ == '__main__':
     pass

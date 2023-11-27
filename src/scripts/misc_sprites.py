@@ -26,7 +26,6 @@ class SunGroup(Group):
             alpha = int(127.5*(1 - math.cos((time_pass - 8700)*math.pi/10000)))
         else:
             alpha = 0
-        print(time_pass, alpha)
         for i in self.sprites():
             i.update(angle, alpha)
 
