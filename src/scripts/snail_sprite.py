@@ -3,7 +3,7 @@ import random
 
 import pygame
 
-from src.scripts.player_sprite import Weapon
+from R_Game.scripts.player_sprite import Weapon
 
 
 class Snail(pygame.sprite.Sprite):

@@ -1,9 +1,9 @@
 from json import loads, dumps
 import pygame
 
-from src.main import HMGame
+from R_Game.main import HMGame
 
-from src.config.config import SCREEN_RESOLUTION
+from R_Game.config.config import SCREEN_RESOLUTION
 
 try:
     with open('saves/save') as file:

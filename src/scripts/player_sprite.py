@@ -3,7 +3,7 @@ import random
 
 import pygame
 
-from src.config.config import STOMP_SPEED
+from R_Game.config.config import STOMP_SPEED
 
 
 class Player(pygame.sprite.Sprite):

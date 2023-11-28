@@ -11,7 +11,8 @@
 #  - endless run after tiger run
 #  - add sralker after bad apple run
 #  .
-#  displace loading screens more evenly
+#  - (?) displace loading screens more evenly
+#  add highscore prompt
 #  .
 #  - introduce speed limit (so that game wont crush)
 
@@ -23,15 +24,15 @@ from json import dumps
 
 import pygame
 
-from src.scripts.color_sine import ColorSine
-from src.scripts.abs_color import ColorAbs
-from src.scripts.misc_sprites import SunRay, SunGroup
+from R_Game.scripts.color_sine import ColorSine
+from R_Game.scripts.abs_color import ColorAbs
+from R_Game.scripts.misc_sprites import SunRay, SunGroup
 
-from src.scripts.player_sprite import Player, Mask, Weapon, Punch, Stomp
-from src.scripts.fly_sprite import Fly, Bat
-from src.scripts.snail_sprite import Snail, Cham, Stomped_Snail
+from R_Game.scripts.player_sprite import Player, Mask, Weapon, Punch, Stomp
+from R_Game.scripts.fly_sprite import Fly, Bat
+from R_Game.scripts.snail_sprite import Snail, Cham, Stomped_Snail
 
-from src.config.config import DISPLAY_CAPTION,\
+from R_Game.config.config import DISPLAY_CAPTION,\
                               STOMP_SPEED,\
                               GRAVITY_ACCELERATION,\
                               GROUND_STIFFNESS,\
@@ -139,6 +140,7 @@ class HMGame(object):
 
         self.clock = pygame.time.Clock()
         self.main_font = 'src/font/Pixeltype.ttf'
+        self.japan_font = 'src/font/Japanese.ttf'
 
         self.game_name_surf = self.text_to_surface_mf('Hohline Cherkasy', True, 'Red')
 
@@ -1152,6 +1154,10 @@ class HMGame(object):
 
     def text_to_surface_mf(self, text, antialias, color, bg=None, size=50):
         _font = pygame.font.Font(self.main_font, size)
+        return _font.render(text, antialias, color, bg)
+
+    def text_to_surface_jf(self, text, antialias, color, bg=None, size=50):
+        _font = pygame.font.Font(self.japan_font, size)
         return _font.render(text, antialias, color, bg)
 
     def score_add(self, mode: str):
