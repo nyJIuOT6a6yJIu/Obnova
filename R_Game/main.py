@@ -1,9 +1,10 @@
 # TODO:
 #  .
+#  pre-release:
 #  add post nuke credits
-#  .
 #  add more patterns for enemies (wednesday): frogs (snail) are slower but jump/lunge, on contact reverse controls for some time)
-#  .
+#  add highscore prompt
+#  /
 #  - (?) add enviromental hazards (enter the sand man)
 #  - (?) freeze pickup (розібратись з мікшером, щоб ставити музику на паузу)
 #  .
@@ -11,10 +12,7 @@
 #  - endless run after tiger run
 #  - add sralker after bad apple run
 #  .
-#  - (?) displace loading screens more evenly
-#  add highscore prompt
-#  .
-#  - introduce speed limit (so that game wont crush)
+#  - (?) introduce speed limit (so that game wont crush)
 
 import math
 import random
@@ -26,23 +24,22 @@ import pygame
 
 from R_Game.scripts.color_sine import ColorSine
 from R_Game.scripts.abs_color import ColorAbs
-from R_Game.scripts.misc_sprites import SunRay, SunGroup
+from R_Game.scripts.misc_sprites import SunGroup
 
 from R_Game.scripts.player_sprite import Player, Mask, Weapon, Punch, Stomp
 from R_Game.scripts.fly_sprite import Fly, Bat
 from R_Game.scripts.snail_sprite import Snail, Cham, Stomped_Snail
 
-from R_Game.config.config import DISPLAY_CAPTION,\
-                              STOMP_SPEED,\
-                              GRAVITY_ACCELERATION,\
-                              GROUND_STIFFNESS,\
-                              ENEMY_SPAWN_INTERVAL_MS,\
-                              ENEMY_PLACEMENT_RANGE,\
-                              FLY_Y_RANGE,\
-                              SNAIL_SPEED_RANGE,\
-                              FLY_SPEED_RANGE,\
-                              MAX_AMMO_CAPACITY,\
-                              PICKUP_DROP_RATE
+from R_Game.config.config import (STOMP_SPEED,
+                                  GRAVITY_ACCELERATION,
+                                  GROUND_STIFFNESS,
+                                  ENEMY_SPAWN_INTERVAL_MS,
+                                  ENEMY_PLACEMENT_RANGE,
+                                  FLY_Y_RANGE,
+                                  SNAIL_SPEED_RANGE,
+                                  FLY_SPEED_RANGE,
+                                  MAX_AMMO_CAPACITY,
+                                  PICKUP_DROP_RATE)
 
 
 class MusicHandler:
@@ -130,7 +127,6 @@ class HMGame(object):
 
         self.load_images()
 
-        pygame.display.set_caption(DISPLAY_CAPTION)
         pygame.display.set_icon(self.rooster_mask)
 
         # self.start_time = 0
@@ -139,8 +135,8 @@ class HMGame(object):
         self.mouse.rect = pygame.Rect(0, 0, 2, 2)
 
         self.clock = pygame.time.Clock()
-        self.main_font = 'src/font/Pixeltype.ttf'
-        self.japan_font = 'src/font/Japanese.ttf'
+        self.main_font = 'R_Game/font/Pixeltype.ttf'
+        self.japan_font = 'R_Game/font/Japanese.ttf'
 
         self.game_name_surf = self.text_to_surface_mf('Hohline Cherkasy', True, 'Red')
 
@@ -158,7 +154,7 @@ class HMGame(object):
         self.wasted_surf = self.text_to_surface_mf('[REDACTED]', True, 'White', 'Black', 48)
         self.wasted_rect = self.wasted_surf.get_rect(center=(179, 181))
 
-        self.screen.blit(pygame.image.load('src/graphics/banners/loading_2.png'), (0, 0))
+        self.screen.blit(pygame.image.load('R_Game/graphics/banners/loading_2.png'), (0, 0))
         pygame.display.update()
 
         self.load_sounds()
@@ -219,111 +215,111 @@ class HMGame(object):
 
     def load_images(self):
 
-        self.normal_sky_surf = pygame.image.load('src/graphics/background/Sky.png').convert_alpha()
+        self.normal_sky_surf = pygame.image.load('R_Game/graphics/background/Sky.png').convert_alpha()
 
-        self.sky_surf    = pygame.image.load('src/graphics/background/Sky_miami.png').convert_alpha()
-        self.ground_surf = pygame.image.load('src/graphics/background/ground.png').convert()
+        self.sky_surf    = pygame.image.load('R_Game/graphics/background/Sky_miami.png').convert_alpha()
+        self.ground_surf = pygame.image.load('R_Game/graphics/background/ground.png').convert()
 
-        self.poroh        = pygame.image.load('src/graphics/misc/poroh.png').convert_alpha()
-        self.poroh_banner = pygame.image.load('src/graphics/banners/pacifist_banner.png').convert()
-        self.no_kill_menu = pygame.image.load('src/graphics/background/no_kill_menu.png').convert_alpha()
+        self.poroh        = pygame.image.load('R_Game/graphics/misc/poroh.png').convert_alpha()
+        self.poroh_banner = pygame.image.load('R_Game/graphics/banners/pacifist_banner.png').convert()
+        self.no_kill_menu = pygame.image.load('R_Game/graphics/background/no_kill_menu.png').convert_alpha()
 
-        self.wojaks          = pygame.image.load('src/graphics/misc/wojaks.png').convert_alpha()
-        self.sun_ray         = pygame.image.load('src/graphics/misc/sun_ray.png').convert_alpha()
-        self.nuke_menu_palms = pygame.image.load('src/graphics/background/palms_bg.png').convert_alpha()
+        self.wojaks          = pygame.image.load('R_Game/graphics/misc/wojaks.png').convert_alpha()
+        self.sun_ray         = pygame.image.load('R_Game/graphics/misc/sun_ray.png').convert_alpha()
+        self.nuke_menu_palms = pygame.image.load('R_Game/graphics/background/palms_bg.png').convert_alpha()
 
-        self.player_walk_1 = pygame.image.load('src/graphics/Player/player_walk_1.png').convert_alpha()
-        self.player_walk_2 = pygame.image.load('src/graphics/Player/player_walk_2.png').convert_alpha()
-        self.player_jump   = pygame.image.load('src/graphics/Player/jump.png').convert_alpha()
+        self.player_walk_1 = pygame.image.load('R_Game/graphics/Player/player_walk_1.png').convert_alpha()
+        self.player_walk_2 = pygame.image.load('R_Game/graphics/Player/player_walk_2.png').convert_alpha()
+        self.player_jump   = pygame.image.load('R_Game/graphics/Player/jump.png').convert_alpha()
 
-        self.player_stand = pygame.image.load('src/graphics/Player/player_stand.png').convert_alpha()
+        self.player_stand = pygame.image.load('R_Game/graphics/Player/player_stand.png').convert_alpha()
 
-        self.rooster_mask = pygame.image.load('src/graphics/Player/rooster.png').convert_alpha()
+        self.rooster_mask = pygame.image.load('R_Game/graphics/Player/rooster.png').convert_alpha()
 
-        self.bear_mask   = pygame.image.load('src/graphics/Player/bear.png').convert_alpha()
-        self.bear_banner = pygame.image.load('src/graphics/banners/do_you_know_this_man.png').convert()
+        self.bear_mask   = pygame.image.load('R_Game/graphics/Player/bear.png').convert_alpha()
+        self.bear_banner = pygame.image.load('R_Game/graphics/banners/do_you_know_this_man.png').convert()
 
-        self.zebra_mask = pygame.image.load('src/graphics/Player/zebra.png').convert_alpha()
+        self.zebra_mask = pygame.image.load('R_Game/graphics/Player/zebra.png').convert_alpha()
 
-        self.tiger_mask_normal = pygame.image.load('src/graphics/Player/tiger_normal.png').convert_alpha()
-        self.tiger_mask_worn   = pygame.transform.scale(pygame.image.load('src/graphics/Player/tiger.png').convert_alpha(), (90, 80))
+        self.tiger_mask_normal = pygame.image.load('R_Game/graphics/Player/tiger_normal.png').convert_alpha()
+        self.tiger_mask_worn   = pygame.transform.scale(pygame.image.load('R_Game/graphics/Player/tiger.png').convert_alpha(), (90, 80))
 
-        self.frog_mask = pygame.image.load('src/graphics/Player/frog.png').convert_alpha()
+        self.frog_mask = pygame.image.load('R_Game/graphics/Player/frog.png').convert_alpha()
 
-        self.punch_frames = [pygame.image.load('src/graphics/Player/punches/punch_1.png').convert_alpha(),
-                             pygame.image.load('src/graphics/Player/punches/punch_1-5.png').convert_alpha(),
-                             pygame.image.load('src/graphics/Player/punches/punch_2.png').convert_alpha(),
-                             pygame.image.load('src/graphics/Player/punches/punch_2-5.png').convert_alpha(),
-                             pygame.image.load('src/graphics/Player/punches/punch_3.png').convert_alpha()
+        self.punch_frames = [pygame.image.load('R_Game/graphics/Player/punches/punch_1.png').convert_alpha(),
+                             pygame.image.load('R_Game/graphics/Player/punches/punch_1-5.png').convert_alpha(),
+                             pygame.image.load('R_Game/graphics/Player/punches/punch_2.png').convert_alpha(),
+                             pygame.image.load('R_Game/graphics/Player/punches/punch_2-5.png').convert_alpha(),
+                             pygame.image.load('R_Game/graphics/Player/punches/punch_3.png').convert_alpha()
                              ]
         for frame in self.punch_frames:
             frame.set_alpha(100)
 
-        self.stomp_image   = pygame.image.load('src/graphics/Player/stomp.png').convert_alpha()
-        self.stomped_enemy = pygame.image.load('src/graphics/snail/stomped.png').convert_alpha()
+        self.stomp_image   = pygame.image.load('R_Game/graphics/Player/stomp.png').convert_alpha()
+        self.stomped_enemy = pygame.image.load('R_Game/graphics/snail/stomped.png').convert_alpha()
 
-        self.weapon   = pygame.image.load('src/graphics/Player/GUN.png').convert_alpha()
-        self.ammo     = pygame.transform.scale(pygame.image.load('src/graphics/icons/ammo.png').convert_alpha(), (50, 50))
-        self.jump_on  = pygame.transform.scale(pygame.image.load('src/graphics/icons/jump_on.png').convert_alpha(), (50, 50))
-        self.jump_off = pygame.transform.scale(pygame.image.load('src/graphics/icons/jump_off.png').convert_alpha(), (50, 50))
-        self.dash     = pygame.transform.scale(pygame.image.load('src/graphics/icons/dash.png').convert_alpha(), (50, 50))
-        self.punch    = pygame.transform.scale(pygame.image.load('src/graphics/icons/punch.png').convert_alpha(), (50, 50))
+        self.weapon   = pygame.image.load('R_Game/graphics/Player/GUN.png').convert_alpha()
+        self.ammo     = pygame.transform.scale(pygame.image.load('R_Game/graphics/icons/ammo.png').convert_alpha(), (50, 50))
+        self.jump_on  = pygame.transform.scale(pygame.image.load('R_Game/graphics/icons/jump_on.png').convert_alpha(), (50, 50))
+        self.jump_off = pygame.transform.scale(pygame.image.load('R_Game/graphics/icons/jump_off.png').convert_alpha(), (50, 50))
+        self.dash     = pygame.transform.scale(pygame.image.load('R_Game/graphics/icons/dash.png').convert_alpha(), (50, 50))
+        self.punch    = pygame.transform.scale(pygame.image.load('R_Game/graphics/icons/punch.png').convert_alpha(), (50, 50))
 
-        self.fly_1    = pygame.image.load('src/graphics/fly/Fly1.png').convert_alpha()
-        self.fly_2    = pygame.image.load('src/graphics/fly/Fly2.png').convert_alpha()
-        self.fly_mask = pygame.image.load('src/graphics/fly/owl.png').convert_alpha()
-        self.bat_mask = pygame.image.load('src/graphics/fly/bat.png').convert_alpha()
+        self.fly_1    = pygame.image.load('R_Game/graphics/fly/Fly1.png').convert_alpha()
+        self.fly_2    = pygame.image.load('R_Game/graphics/fly/Fly2.png').convert_alpha()
+        self.fly_mask = pygame.image.load('R_Game/graphics/fly/owl.png').convert_alpha()
+        self.bat_mask = pygame.image.load('R_Game/graphics/fly/bat.png').convert_alpha()
 
-        self.snail_1    = pygame.image.load('src/graphics/snail/snail1.png').convert_alpha()
-        self.snail_2    = pygame.image.load('src/graphics/snail/snail2.png').convert_alpha()
-        self.snail_mask = pygame.image.load('src/graphics/snail/dog.png').convert_alpha()
-        self.cham_1     = pygame.image.load('src/graphics/snail/cham1.png').convert_alpha()
-        self.cham_2     = pygame.image.load('src/graphics/snail/cham2.png').convert_alpha()
-        self.cham_mask  = pygame.image.load('src/graphics/snail/cham.png').convert_alpha()
+        self.snail_1    = pygame.image.load('R_Game/graphics/snail/snail1.png').convert_alpha()
+        self.snail_2    = pygame.image.load('R_Game/graphics/snail/snail2.png').convert_alpha()
+        self.snail_mask = pygame.image.load('R_Game/graphics/snail/dog.png').convert_alpha()
+        self.cham_1     = pygame.image.load('R_Game/graphics/snail/cham1.png').convert_alpha()
+        self.cham_2     = pygame.image.load('R_Game/graphics/snail/cham2.png').convert_alpha()
+        self.cham_mask  = pygame.image.load('R_Game/graphics/snail/cham.png').convert_alpha()
 
-        self.oob_pointer = pygame.image.load('src/graphics/icons/oob_pointer.png').convert_alpha()
+        self.oob_pointer = pygame.image.load('R_Game/graphics/icons/oob_pointer.png').convert_alpha()
 
     def load_sounds(self):
-        self.death_sound     = pygame.mixer.Sound('src/audio/death sounds/death.mp3')
-        self.death_sound_2   = pygame.mixer.Sound('src/audio/death sounds/death2.mp3')
-        self.death_sound_3   = pygame.mixer.Sound('src/audio/death sounds/death3.mp3')
-        self.death_sound_4   = pygame.mixer.Sound('src/audio/death sounds/death4.mp3')
+        self.death_sound     = pygame.mixer.Sound('R_Game/audio/death sounds/death.mp3')
+        self.death_sound_2   = pygame.mixer.Sound('R_Game/audio/death sounds/death2.mp3')
+        self.death_sound_3   = pygame.mixer.Sound('R_Game/audio/death sounds/death3.mp3')
+        self.death_sound_4   = pygame.mixer.Sound('R_Game/audio/death sounds/death4.mp3')
 
-        self.menu_music      = pygame.mixer.Sound('src/audio/menu music/menu.mp3')
-        self.post_nuke_music = pygame.mixer.Sound('src/audio/menu music/post_nuke_menu.mp3')
+        self.menu_music      = pygame.mixer.Sound('R_Game/audio/menu music/menu.mp3')
+        self.post_nuke_music = pygame.mixer.Sound('R_Game/audio/menu music/post_nuke_menu.mp3')
 
-        self.pacifist_speech = pygame.mixer.Sound('src/audio/misc sounds/pacifist_speech.mp3')
-        self.pacifist_menu_music = pygame.mixer.Sound('src/audio/menu music/pacifist_menu.mp3')
+        self.pacifist_speech = pygame.mixer.Sound('R_Game/audio/misc sounds/pacifist_speech.mp3')
+        self.pacifist_menu_music = pygame.mixer.Sound('R_Game/audio/menu music/pacifist_menu.mp3')
 
-        self.screen.blit(pygame.image.load('src/graphics/banners/loading_3.png'), (0, 0))
+        self.screen.blit(pygame.image.load('R_Game/graphics/banners/loading_3.png'), (0, 0))
         pygame.display.update()
 
-        self.first_run_music = pygame.mixer.Sound('src/audio/run music/first_run_music.mp3')
+        self.first_run_music = pygame.mixer.Sound('R_Game/audio/run music/first_run_music.mp3')
 
-        self.run_music_1 = pygame.mixer.Sound('src/audio/run music/run_music1.mp3')
-        self.run_music_2 = pygame.mixer.Sound('src/audio/run music/run_music2.mp3')
-        self.run_music_3 = pygame.mixer.Sound('src/audio/run music/run_music3.mp3')
+        self.run_music_1 = pygame.mixer.Sound('R_Game/audio/run music/run_music1.mp3')
+        self.run_music_2 = pygame.mixer.Sound('R_Game/audio/run music/run_music2.mp3')
+        self.run_music_3 = pygame.mixer.Sound('R_Game/audio/run music/run_music3.mp3')
 
-        self.bear_music  = pygame.mixer.Sound('src/audio/run music/bear_run_music.mp3')
-        self.zebra_music = pygame.mixer.Sound('src/audio/run music/zebra_run_music.mp3')
-        self.tiger_music = pygame.mixer.Sound('src/audio/run music/tiger_run_music.mp3')
+        self.bear_music  = pygame.mixer.Sound('R_Game/audio/run music/bear_run_music.mp3')
+        self.zebra_music = pygame.mixer.Sound('R_Game/audio/run music/zebra_run_music.mp3')
+        self.tiger_music = pygame.mixer.Sound('R_Game/audio/run music/tiger_run_music.mp3')
 
-        self.post_bear_music  = pygame.mixer.Sound('src/audio/run music/post_bear_music.mp3')
-        self.post_zebra_music = pygame.mixer.Sound('src/audio/run music/post_zebra_music.mp3')
-        self.post_tiger_music = pygame.mixer.Sound('src/audio/run music/post_tiger_music.mp3')
+        self.post_bear_music  = pygame.mixer.Sound('R_Game/audio/run music/post_bear_music.mp3')
+        self.post_zebra_music = pygame.mixer.Sound('R_Game/audio/run music/post_zebra_music.mp3')
+        self.post_tiger_music = pygame.mixer.Sound('R_Game/audio/run music/post_tiger_music.mp3')
 
-        self.enter_the_sandman_music = pygame.mixer.Sound('src/audio/boss music/enter_the_sandman.mp3')
+        self.enter_the_sandman_music = pygame.mixer.Sound('R_Game/audio/boss music/enter_the_sandman.mp3')
 
-        self.nuke_music      = pygame.mixer.Sound('src/audio/misc music/nuke.mp3')
+        self.nuke_music      = pygame.mixer.Sound('R_Game/audio/misc music/nuke.mp3')
 
-        self.gun_sound           = pygame.mixer.Sound('src/audio/misc sounds/gunshot.mp3')
-        self.empty_gun_sound     = pygame.mixer.Sound('src/audio/misc sounds/empty_gun.mp3')
-        self.gun_pickup_sound    = pygame.mixer.Sound('src/audio/misc sounds/gun_pickup.mp3')
-        self.kill_run_init_sound = pygame.mixer.Sound('src/audio/misc sounds/kill_run_init.mp3')
-        self.throw_sound         = pygame.mixer.Sound('src/audio/misc sounds/throw.mp3')
-        self.swing_sound         = pygame.mixer.Sound('src/audio/misc sounds/swing.mp3')
-        self.punch_sound         = pygame.mixer.Sound('src/audio/misc sounds/punch.mp3')
-        self.stomp_sound         = pygame.mixer.Sound('src/audio/misc sounds/stomp.mp3')
+        self.gun_sound           = pygame.mixer.Sound('R_Game/audio/misc sounds/gunshot.mp3')
+        self.empty_gun_sound     = pygame.mixer.Sound('R_Game/audio/misc sounds/empty_gun.mp3')
+        self.gun_pickup_sound    = pygame.mixer.Sound('R_Game/audio/misc sounds/gun_pickup.mp3')
+        self.kill_run_init_sound = pygame.mixer.Sound('R_Game/audio/misc sounds/kill_run_init.mp3')
+        self.throw_sound         = pygame.mixer.Sound('R_Game/audio/misc sounds/throw.mp3')
+        self.swing_sound         = pygame.mixer.Sound('R_Game/audio/misc sounds/swing.mp3')
+        self.punch_sound         = pygame.mixer.Sound('R_Game/audio/misc sounds/punch.mp3')
+        self.stomp_sound         = pygame.mixer.Sound('R_Game/audio/misc sounds/stomp.mp3')
 
     def choose_music(self, mode):
         music_ = [None]
