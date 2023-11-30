@@ -252,7 +252,7 @@ class Mask(pygame.sprite.Sprite):
             return
         _now = pygame.time.get_ticks()
         _time_spent = _now - self.punch_used
-        _final = 160 + int(2.5 * self.body.game.score)
+        _final = 160 + int(2.5 * self.body.game.score)*bool(self.body.game.kills)
         _time_by_punch = _time_spent % 160
 
         if _time_by_punch < 40:
@@ -276,7 +276,6 @@ class Mask(pygame.sprite.Sprite):
         return 950 - 100*bool(self.body.game.advanced_enemies) - self.body.game.score + self.punch_used - pygame.time.get_ticks()
 
     def update(self):
-        # print(self.dash_status)
         match self.type_:
             case 'rooster':
                 self.rect.center = (self.body.rect.midtop[0] + 7, self.body.rect.midtop[1] + 23)

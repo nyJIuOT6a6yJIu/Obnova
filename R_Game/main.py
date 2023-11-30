@@ -1,15 +1,15 @@
 # TODO:
 #  .
 #  pre-release:
-#  add post nuke credits
-#  add more patterns for enemies (wednesday): frogs (snail) are slower but jump/lunge, on contact reverse controls for some time)
+#  different Duke Nukem quotes
 #  add highscore prompt
 #  /
 #  - (?) add enviromental hazards (enter the sand man)
 #  - (?) freeze pickup (розібратись з мікшером, щоб ставити музику на паузу)
 #  .
+#  add more patterns for enemies (wednesday): frogs (snail) are slower but jump/lunge, on contact reverse controls for some time)
 #  - add white-black bad apple after pacifist
-#  - endless run after tiger run
+#  - endless run after bad apple run
 #  - add sralker after bad apple run
 #  .
 #  - (?) introduce speed limit (so that game wont crush)
@@ -41,6 +41,7 @@ from R_Game.config.config import (STOMP_SPEED,
                                   MAX_AMMO_CAPACITY,
                                   PICKUP_DROP_RATE)
 
+from R_Game.config.titles import NUKE_TITLES
 
 class MusicHandler:
 
@@ -224,9 +225,10 @@ class HMGame(object):
         self.poroh_banner = pygame.image.load('R_Game/graphics/banners/pacifist_banner.png').convert()
         self.no_kill_menu = pygame.image.load('R_Game/graphics/background/no_kill_menu.png').convert_alpha()
 
-        self.wojaks          = pygame.image.load('R_Game/graphics/misc/wojaks.png').convert_alpha()
-        self.sun_ray         = pygame.image.load('R_Game/graphics/misc/sun_ray.png').convert_alpha()
-        self.nuke_menu_palms = pygame.image.load('R_Game/graphics/background/palms_bg.png').convert_alpha()
+        self.wojaks           = pygame.image.load('R_Game/graphics/misc/wojaks.png').convert_alpha()
+        self.sun_ray          = pygame.image.load('R_Game/graphics/misc/sun_ray.png').convert_alpha()
+        self.nuke_menu_palms  = pygame.image.load('R_Game/graphics/background/palms_bg.png').convert_alpha()
+        self.squidward_banner = pygame.image.load('R_Game/graphics/banners/squidward_meme_banner.png').convert_alpha()
 
         self.player_walk_1 = pygame.image.load('R_Game/graphics/Player/player_walk_1.png').convert_alpha()
         self.player_walk_2 = pygame.image.load('R_Game/graphics/Player/player_walk_2.png').convert_alpha()
@@ -357,6 +359,8 @@ class HMGame(object):
             self.music_handler.music_play(self.menu_music)
 
     def set_up_game(self, mode='rooster'):
+        self.titles = None
+
         self.max_ammo = MAX_AMMO_CAPACITY
         self.pickup_rate = PICKUP_DROP_RATE  # percentage chance
         self.pickups = pygame.sprite.LayeredUpdates()
@@ -384,7 +388,7 @@ class HMGame(object):
         self.enemy_group = pygame.sprite.LayeredUpdates()
         self.enemy_attachments = pygame.sprite.LayeredUpdates()
 
-        self.score = 0
+        self.score = 136
         self.kills = 0
 
         self.gunshot_afterimage = []
@@ -793,6 +797,7 @@ class HMGame(object):
         if time_pass_ms > 18700:
             self.game_state = self.GameState.NUKE_CREDITS
             self.advanced_enemies = True
+            self.titles = [i for i in NUKE_TITLES]
             self.sky_color = ColorAbs((255, 255, 255))
             self.animation_time = pygame.time.get_ticks()
 
@@ -823,12 +828,14 @@ class HMGame(object):
             inc = self.delta_time * 60 / 2000
             self.sky_color.increment(inc)
 
+        self.draw_titles(time_pass_ms)
+
         if time_pass_ms > 230300:
             self.progress['zebra'] = True
             self.game_state = self.GameState.NUKE_MENU
             self.sky_color.red, self.sky_color.green, self.sky_color.blue = 0, 0, 0
             self.music_handler.music_play(self.post_nuke_music)
-        #  random credit generation
+
 
     def pacifist_animation(self):
         time_pass_ms = pygame.time.get_ticks() - self.animation_time
@@ -1112,6 +1119,34 @@ class HMGame(object):
             _punch_cd_rect = _punch_cd_surf.get_rect(center=(710, 360))
             self.screen.blit(self.punch, (685, 335))
             self.screen.blit(_punch_cd_surf, _punch_cd_rect)
+
+    def draw_titles(self, time_pass):
+        if self.titles is None or self.titles == []:
+            return
+        if time_pass > 223000:
+            _alpha = pygame.math.clamp((time_pass - 223000) * 255 // 1300, 0, 255)
+            self.squidward_banner.set_alpha(_alpha)
+            self.screen.blit(self.squidward_banner, (0, 0))
+        current_title = self.titles[0]
+        if time_pass > current_title[0]: # pora
+            top_text_surf = self.text_to_surface_mf(current_title[2], True, '#0cf3ab', size=60)
+            bottom_text_surf = self.text_to_surface_mf(current_title[3], True, '#F30C54', size=52)
+            _alpha = 255
+            if time_pass - current_title[0] < 800:
+                _alpha = pygame.math.clamp((time_pass - current_title[0]) * 255 // 800, 0, 255)
+            elif current_title[1] - time_pass < 1200:
+                _alpha = pygame.math.clamp((current_title[1] - time_pass) * 255 // 1200, 0, 255)
+            top_text_surf.set_alpha(_alpha)
+            bottom_text_surf.set_alpha(_alpha)
+            top_text_rect = top_text_surf.get_rect(center=(400, 175))
+            bottom_text_rect = bottom_text_surf.get_rect(center=(400, 275))
+            self.screen.blit(top_text_surf, top_text_rect)
+            self.screen.blit(bottom_text_surf, bottom_text_rect)
+        if time_pass > current_title[1]:
+            self.titles.pop(0)
+
+
+
 
     def difficulty_scaling(self):
         if self.kills > 0 and int(self.score) != self.last_rescale_score:
