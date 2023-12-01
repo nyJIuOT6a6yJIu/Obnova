@@ -10,7 +10,7 @@ NUKE_TITLES = [(11300, 16000, 'Ebansoft proudly presents', ''),
                (139000, 143700, 'Voiced by', 'Gianni Matragrano'),
                (150000, 155700, 'Potroshenko sprite', 'provided by sTasyaN <3'),
                (158000, 162700, 'Pipe fall death sound effect', "Proposed by Yigar'"),
-               (204300, 211000, 'Try not to k ill everyone', 'next time'),
+               (204300, 211000, 'Try not to kill everyone', 'next time'),
                (216000, 228300, 'Thanks for playing', '')]
 
 

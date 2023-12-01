@@ -361,7 +361,12 @@ class HMGame(object):
         elif self.music_handler.current_track is not self.menu_music:
             self.music_handler.music_play(self.menu_music)
 
-    def set_up_game(self, mode='rooster'):
+    def set_up_game(self, _mode='rooster'):
+        if _mode == 'second':
+            mode = 'rooster'
+        else:
+            mode = _mode
+
         self.titles = None
 
         self.max_ammo = MAX_AMMO_CAPACITY
@@ -383,8 +388,12 @@ class HMGame(object):
 
         else:#if mode == 'rooster':
             self.enemy_spawn = []
-            if mode != 'tiger':
+            if mode != 'tiger' and _mode != 'second':
                 self.player_sprite.pick_up_weapon(Weapon(self))
+            elif mode != 'tiger' and _mode == 'second':
+                self.pickups.add(Weapon(self, (200, 300)))
+                self.enemy_spawn = [None, 'fly']
+
 
         # player_attachments.change_layer(mask_sprite, 0)
 
@@ -400,7 +409,7 @@ class HMGame(object):
             self.jump_tip = self.text_to_surface_mf('SPACE/W to Jump', True, '#5d5d5d', size=32)
             self.move_tip = self.text_to_surface_mf('A/D to Move', True, '#5d5d5d', size=32)
             self.shoot_tip = self.text_to_surface_mf('LMB to Shoot', True, '#5d5d5d', size=32)
-            self.pickup_tip = self.text_to_surface_mf('RMB to Drop', True, '#5d5d5d', size=32)
+            self.pickup_tip = self.text_to_surface_mf('RMB to Drop/Pickup', True, '#5d5d5d', size=32)
             self.dash_tip = self.text_to_surface_mf('SHIFT to Air Dash', True, '#5d5d5d', size=32)
             if mode == 'tiger':
                 self.shoot_tip = self.text_to_surface_mf('LMB to Punch', True, '#5d5d5d', size=32)
@@ -513,7 +522,13 @@ class HMGame(object):
             elif self.game_state in [self.GameState.FIRST_MENU, self.GameState.DEFAULT_MENU, self.GameState.NUKE_MENU, self.GameState.NO_KILL_MENU] \
                     and event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_y:
-                    self.set_up_game()
+                    if self.game_state == self.GameState.FIRST_MENU:
+                        if self.score == 0:
+                            self.set_up_game('first')
+                        else:
+                            self.set_up_game('second')
+                    else:
+                        self.set_up_game()
                 elif self.progress.get('bear', False) and event.key == pygame.K_b:
                     self.set_up_game('bear')
                 elif self.progress.get('zebra', False) and event.key == pygame.K_z:
@@ -1061,16 +1076,16 @@ class HMGame(object):
                     self.shoot_tip.set_alpha(100 - 5 * int(self.score))
                     self.pickup_tip.set_alpha(100-5*int(self.score))
                     self.dash_tip.set_alpha(100-5*int(self.score))
-                    self.screen.blit(self.jump_tip, (620, 25))
-                    self.screen.blit(self.move_tip, (620, 45))
-                    self.screen.blit(self.shoot_tip, (620, 65))
-                    self.screen.blit(self.pickup_tip, (620, 85))
+                    self.screen.blit(self.jump_tip, (615, 25))
+                    self.screen.blit(self.move_tip, (615, 45))
+                    self.screen.blit(self.shoot_tip, (615, 65))
+                    self.screen.blit(self.pickup_tip, (615, 85))
                     if self.game_state == self.GameState.ZEBRA_GAME:
-                        self.screen.blit(self.dash_tip, (620, 105))
+                        self.screen.blit(self.dash_tip, (615, 105))
             case self.GameState.FIRST_GAME:
                 if int(self.score) < 20:
                     self.jump_tip.set_alpha(100 - 5 * int(self.score))
-                    self.screen.blit(self.jump_tip, (620, 25))
+                    self.screen.blit(self.jump_tip, (615, 25))
 
     def draw_ammo_count(self):
         if self.player_sprite.weapon:
@@ -1133,12 +1148,12 @@ class HMGame(object):
             self.screen.blit(_punch_cd_surf, _punch_cd_rect)
 
     def draw_titles(self, time_pass):
-        if self.titles is None or self.titles == []:
-            return
         if time_pass > 223000:
-            _alpha = pygame.math.clamp((time_pass - 223000) * 255 // 1300, 0, 255)
+            _alpha = int(pygame.math.clamp((time_pass - 223000) * 255 // 1300, 0, 255))
             self.squidward_banner.set_alpha(_alpha)
             self.screen.blit(self.squidward_banner, (0, 0))
+        if self.titles is None or self.titles == []:
+            return
         current_title = self.titles[0]
         if time_pass > current_title[0]: # pora
             top_text_surf = self.text_to_surface_mf(current_title[2], True, '#0cf3ab', size=60)

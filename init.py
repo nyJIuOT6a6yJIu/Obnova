@@ -6,15 +6,22 @@ from R_Game.config.config import SCREEN_RESOLUTION, DISPLAY_CAPTION
 
 from some_function import load, save
 
-progress = load()
 
-screen = pygame.display.set_mode(SCREEN_RESOLUTION)
-pygame.display.set_caption(DISPLAY_CAPTION)
-screen.blit(pygame.image.load('R_Game/graphics/banners/loading_1.png'), (0, 0))
-pygame.display.update()
+def main():
+    progress = load()
 
-game = HMGame(screen, progress)
+    screen = pygame.display.set_mode(SCREEN_RESOLUTION)
+    pygame.display.set_caption(DISPLAY_CAPTION)
+    screen.blit(pygame.image.load('R_Game/graphics/banners/loading_1.png'), (0, 0))
+    pygame.display.update()
 
-new_save = game.start_game()
+    game = HMGame(screen, progress)
 
-save(new_save)
+    new_save = game.start_game()
+
+    save(new_save)
+
+
+if __name__ == '__main__':
+    main()
+    
