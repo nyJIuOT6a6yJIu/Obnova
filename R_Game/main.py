@@ -294,6 +294,9 @@ class HMGame(object):
         self.pacifist_menu_music = pygame.mixer.Sound('R_Game/audio/menu music/pacifist_menu.mp3')
 
         self.screen.blit(pygame.image.load('R_Game/graphics/banners/loading_3.png'), (0, 0))
+        _warning_text_ = self.text_to_surface_mf('WARNING: Game contains flashing lights', True, (50, 50, 50), size=40)
+        _rect_ = _warning_text_.get_rect(center=(400, 370))
+        self.screen.blit(_warning_text_, _rect_)
         pygame.display.update()
 
         self.first_run_music = pygame.mixer.Sound('R_Game/audio/run music/first_run_music.mp3')
