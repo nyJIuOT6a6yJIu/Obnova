@@ -1,9 +1,5 @@
 # TODO:
 #  .
-#  pre-release:
-#  different Duke Nukem quotes
-#  add highscore prompt
-#  /
 #  - (?) add enviromental hazards (enter the sand man)
 #  - (?) freeze pickup (розібратись з мікшером, щоб ставити музику на паузу)
 #  .
@@ -21,6 +17,8 @@ from datetime import datetime
 from json import dumps
 
 import pygame
+
+from some_function import save
 
 from R_Game.scripts.color_sine import ColorSine
 from R_Game.scripts.abs_color import ColorAbs
@@ -199,6 +197,7 @@ class HMGame(object):
         self.post_nuke_music.set_volume(0.6)
 
         self.pacifist_speech.set_volume(3.0)
+        self.pacifist_speech_2.set_volume(3.0)
         self.pacifist_menu_music.set_volume(0.5)
 
         self.enemy_spawn_timer = pygame.USEREVENT + 1
@@ -206,7 +205,7 @@ class HMGame(object):
         self.score = -1
         self.delta_time = 1
 
-        if self.progress.get('deaths', 0) == 0:
+        if self.progress.get('deaths', 0) == 0 and not self.progress.get("color_blind_unlocked", False):
             self.set_up_game('first')
         else:
             self.game_state = self.GameState.DEFAULT_MENU
@@ -290,7 +289,8 @@ class HMGame(object):
         self.menu_music      = pygame.mixer.Sound('R_Game/audio/menu music/menu.mp3')
         self.post_nuke_music = pygame.mixer.Sound('R_Game/audio/menu music/post_nuke_menu.mp3')
 
-        self.pacifist_speech = pygame.mixer.Sound('R_Game/audio/misc sounds/pacifist_speech.mp3')
+        self.pacifist_speech     = pygame.mixer.Sound('R_Game/audio/misc sounds/pacifist_speech.mp3')
+        self.pacifist_speech_2   = pygame.mixer.Sound('R_Game/audio/misc sounds/pacifist_speech_2.mp3')
         self.pacifist_menu_music = pygame.mixer.Sound('R_Game/audio/menu music/pacifist_menu.mp3')
 
         self.screen.blit(pygame.image.load('R_Game/graphics/banners/loading_3.png'), (0, 0))
@@ -341,13 +341,13 @@ class HMGame(object):
 
         if self.progress.get(f"{mode}_played", False):
             if self.progress.get('rooster_finished', False):
-                music_.extend([self.run_music_2, self.run_music_3])
+                music_.extend([self.run_music_1, self.run_music_2, self.run_music_3])
             if self.progress.get('bear_finished', False):
-                music_.append(self.post_bear_music)
+                music_.extend([self.bear_music, self.post_bear_music])
             if self.progress.get('zebra_finished', False):
-                music_.append(self.post_zebra_music)
+                music_.extend([self.zebra_music, self.post_zebra_music])
             if self.progress.get('tiger_finished', False):
-                music_.append(self.post_tiger_music)
+                music_.extend([self.tiger_music, self.post_tiger_music])
             if self.progress.get('frog_finished', False):
                 music_.append(self.first_run_music)
 
@@ -388,7 +388,7 @@ class HMGame(object):
         self.enemy_group = pygame.sprite.LayeredUpdates()
         self.enemy_attachments = pygame.sprite.LayeredUpdates()
 
-        self.score = 136
+        self.score = 0
         self.kills = 0
 
         self.gunshot_afterimage = []
@@ -603,13 +603,17 @@ class HMGame(object):
             else:
                 self.progress['tiger'] = True
                 self.game_state = self.GameState.NO_KILL_START
+                self.sky_color_foreground.fill('Black')
                 self.music_handler.music_stop(550)
                 self.poroh_banner.set_alpha(255)
                 self.mask_sprite.image.set_alpha(0)
                 for i in self.enemy_group:
                     i.mask_bool = False
                 self.kill_run_init_sound.play()
-                self.pacifist_speech.play()
+                if self.progress.get('color_blind_unlocked', False):
+                    self.pacifist_speech_2.play()
+                else:
+                    self.pacifist_speech.play()
 
                 # self.screen.blit(self.ground_surf, (0, 300))
                 self.animation_time = pygame.time.get_ticks()
@@ -640,8 +644,10 @@ class HMGame(object):
             self.screen.blit(self.frog_menu, self.frog_menu_rect)
         else:
             self.screen.blit(self.wasted_surf, self.wasted_rect)
-
-        score_line = f'Your score is {int(self.score)}'
+        if int(self.score) >= self.progress.get('highscore', 0):
+            score_line = f"New highscore: {self.progress.get('highscore', int(self.score))}"
+        else:
+            score_line = f'Your score is {int(self.score)}'
         rooster_game_line = 'Press Y to continue'
         bear_game_line = ''
         zebra_game_line = ''
@@ -873,10 +879,16 @@ class HMGame(object):
 
             self.screen.blit(self.poroh_banner, (0, 0))
 
-        if time_pass_ms > 10700:
+        if time_pass_ms > 71000:
+            _alpha = pygame.math.clamp((time_pass_ms - 71000)*255 // 1500, 0, 255)
+            self.sky_color_foreground.set_alpha(_alpha)
+            self.screen.blit(self.sky_color_foreground, (0, 0))
+
+        if (time_pass_ms > 78200 and self.progress.get('color_blind_unlocked', False)) or (time_pass_ms > 10700 and not self.progress.get('color_blind_unlocked', False)):
             self.game_state = self.GameState.NO_KILL_MENU
             self.progress['color_blind_unlocked'] = True
             self.music_handler.music_play(self.pacifist_menu_music)
+
 
     def pacifist_menu(self):
         _color = self.sky_color.return_color()
@@ -919,10 +931,7 @@ class HMGame(object):
             if self.progress['kills'] > 100:
                 self.progress['tiger'] = True
 
-            new_save = dumps(self.progress)
-            with open('saves/save', mode='w') as file:
-                file.write(new_save)
-
+            save(self.progress)
 
             # print(self.player_sprite.rect.top - self.player_sprite.rect.bottom)
 

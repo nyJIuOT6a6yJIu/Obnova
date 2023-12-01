@@ -180,9 +180,7 @@ class Mask(pygame.sprite.Sprite):
         self.punch_sprite = Punch(_player)
         _player.game.player_attachments.add(self.punch_sprite)
 
-        self.stomp_sprite = Stomp(_player)
-        _player.game.player_attachments.add(self.stomp_sprite)
-        _player.game.player_attachments.change_layer(self.stomp_sprite, 1)
+        self.stomp_sprite = None
         self.stomps = 0
 
         if mask == 'rooster':
@@ -199,6 +197,10 @@ class Mask(pygame.sprite.Sprite):
             self.image = pygame.transform.scale(_player.game.tiger_mask_normal, (90, 80))
             self.punch_status = 'ready'
             self.punch = self.punch_process
+
+            self.stomp_sprite = Stomp(_player)
+            _player.game.player_attachments.add(self.stomp_sprite)
+            _player.game.player_attachments.change_layer(self.stomp_sprite, 1)
         elif mask == 'frog':
             self.image = pygame.transform.scale(_player.game.frog_mask, (85, 75))
             self.deflect = True
@@ -208,6 +210,10 @@ class Mask(pygame.sprite.Sprite):
 
             self.punch_status = 'ready'
             self.punch = self.punch_process
+
+            self.stomp_sprite = Stomp(_player)
+            _player.game.player_attachments.add(self.stomp_sprite)
+            _player.game.player_attachments.change_layer(self.stomp_sprite, 1)
         else:
             self.image = pygame.surface.Surface((90, 95))
             self.image.set_alpha(0)
