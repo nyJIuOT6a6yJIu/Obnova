@@ -402,7 +402,7 @@ class HMGame(object):
         self.enemy_group = pygame.sprite.LayeredUpdates()
         self.enemy_attachments = pygame.sprite.LayeredUpdates()
 
-        self.score = 130
+        self.score = 0
         self.kills = 0
 
         self.gunshot_afterimage = []
