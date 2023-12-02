@@ -192,6 +192,7 @@ class HMGame(object):
         self.menu_music.set_volume(0.2)
 
         self.enter_the_sandman_music.set_volume(0.8)
+        self.enter_the_siemen_music.set_volume(1.1)
 
         self.nuke_music.set_volume(1.0)
         self.post_nuke_music.set_volume(0.6)
@@ -314,6 +315,7 @@ class HMGame(object):
         self.post_tiger_music = pygame.mixer.Sound('R_Game/audio/run music/post_tiger_music.mp3')
 
         self.enter_the_sandman_music = pygame.mixer.Sound('R_Game/audio/boss music/enter_the_sandman.mp3')
+        self.enter_the_siemen_music  = pygame.mixer.Sound('R_Game/audio/boss music/t00rbo_ki11er_BLOODY_run.mp3')
 
         self.nuke_music      = pygame.mixer.Sound('R_Game/audio/misc music/nuke.mp3')
 
@@ -400,7 +402,7 @@ class HMGame(object):
         self.enemy_group = pygame.sprite.LayeredUpdates()
         self.enemy_attachments = pygame.sprite.LayeredUpdates()
 
-        self.score = 0
+        self.score = 130
         self.kills = 0
 
         self.gunshot_afterimage = []
@@ -538,7 +540,7 @@ class HMGame(object):
                 elif datetime.today().isoweekday() == 3 and event.key == pygame.K_f:
                     self.set_up_game('frog')
 
-            elif self.game_state == self.GameState.NUKE_CREDITS and (event.type == pygame.KEYDOWN or event.type == pygame.MOUSEBUTTONDOWN):
+            elif self.game_state == self.GameState.NUKE_CREDITS and (event.type == pygame.KEYDOWN and self.progress.get('zebra', False)):
                 self.game_state = self.GameState.NUKE_MENU
                 self.progress['zebra'] = True
                 _color = self.sky_color.return_color()
@@ -1202,7 +1204,8 @@ class HMGame(object):
                 if self.game_state == self.GameState.TIGER_GAME:
                     self.mask_sprite.image = self.tiger_mask_worn
                 self.kill_run_init_sound.play()
-                self.music_handler.music_play(self.enter_the_sandman_music)
+                boss_music = random.choice([self.enter_the_sandman_music, self.enter_the_siemen_music])
+                self.music_handler.music_play(boss_music)
             self.advanced_enemies = True
             self.sky_is_over = True  # I don't wanna see you go
         elif self.progress.get('tiger', False) and not self.kills > 0 and int(self.score) >= 120:
@@ -1259,7 +1262,7 @@ class HMGame(object):
                 case 'pass':
                     self.score += 0.25
                     if self.progress.get('zebra', False) is False:
-                        self.score += self.progress.get('deaths', 0)/50
+                        self.score += self.progress.get('deaths', 0) / 50
 
 if __name__ == '__main__':
     pass
