@@ -6,24 +6,24 @@ import pygame
 
 
 class Fly(pygame.sprite.Sprite):
-    def __init__(self, game):
+    def __init__(self, game, direct_init=True):
         super().__init__()
         self.game = game
+        if direct_init:
+            self.anim_frames = [game.fly_1,
+                                game.fly_2]
+            self.anim_index = 0
+            self.image = self.anim_frames[self.anim_index]
+            self.rect = self.image.get_rect()
+            self.center = [0.0, 0.0]
+            self.speed = [0, 0]
 
-        self.anim_frames = [game.fly_1,
-                            game.fly_2]
-        self.anim_index = 0
-        self.image = self.anim_frames[self.anim_index]
-        self.rect = self.image.get_rect()
-        self.center = [0.0, 0.0]
-        self.speed = [0, 0]
-
-        if self.game.game_state == self.game.GameState.FIRST_GAME:
-            self.mask_bool = False
-        else:
-            self.mask_bool = True
-        self.mask = OwlMask(self)
-        self.game.enemy_attachments.add(self.mask)
+            if self.game.game_state == self.game.GameState.FIRST_GAME:
+                self.mask_bool = False
+            else:
+                self.mask_bool = True
+            self.mask = OwlMask(self)
+            self.game.enemy_attachments.add(self.mask)
 
     def set_speed(self, v_x=None, v_y=None):
         if v_x:
@@ -58,29 +58,32 @@ class Fly(pygame.sprite.Sprite):
 
 
 class Bat(pygame.sprite.Sprite):
-    def __init__(self, game):
+    def __init__(self, game, direct_init=True):
         super().__init__()
         self.game = game
+        if direct_init:
+            self.anim_frames = [game.fly_1,
+                                game.fly_2]
+            self.anim_index = 0
+            self.image = self.anim_frames[self.anim_index]
+            self.rect = self.image.get_rect()
+            self.center = [0.0, 0.0]
+            self.speed = [0, 0]
 
-        self.anim_frames = [game.fly_1,
-                            game.fly_2]
-        self.anim_index = 0
-        self.image = self.anim_frames[self.anim_index]
-        self.rect = self.image.get_rect()
-        self.center = [0.0, 0.0]
-        self.speed = [0, 0]
+            if self.game.game_state == self.game.GameState.FIRST_GAME:
+                self.mask_bool = False
+            else:
+                self.mask_bool = True
+
+            self.mask = BatMask(self)
+            self.game.enemy_attachments.add(self.mask)
+
         self.t = random.randint(1, 500)
         self.difficulty = 3
         self.phase_1 = random.randint(1, 250)
         self.phase_2 = random.randint(1, 125)
 
-        if self.game.game_state == self.game.GameState.FIRST_GAME:
-            self.mask_bool = False
-        else:
-            self.mask_bool = True
 
-        self.mask = BatMask(self)
-        self.game.enemy_attachments.add(self.mask)
 
     def set_speed(self, v_x=None, v_y=None):
         if v_x:
@@ -127,12 +130,12 @@ class Bat(pygame.sprite.Sprite):
 
 
 class OwlMask(pygame.sprite.Sprite):
-    def __init__(self, _body):
+    def __init__(self, _body, direct_init=True):
         super().__init__()
-
-        self.image = pygame.transform.scale(_body.game.fly_mask, (35, 45))
-        self.rect = self.image.get_rect()
-        self.body = _body
+        if direct_init:
+            self.image = pygame.transform.scale(_body.game.fly_mask, (35, 45))
+            self.rect = self.image.get_rect()
+            self.body = _body
 
     def update(self):
         if self.body.mask_bool:
@@ -142,12 +145,12 @@ class OwlMask(pygame.sprite.Sprite):
         self.rect.center = (self.body.rect.center[0] - 5, self.body.rect.center[1])
 
 class BatMask(pygame.sprite.Sprite):
-    def __init__(self, _body):
+    def __init__(self, _body, direct_init=True):
         super().__init__()
-
-        self.image = pygame.transform.scale(_body.game.bat_mask, (55, 55))
-        self.rect = self.image.get_rect()
-        self.body = _body
+        if direct_init:
+            self.image = pygame.transform.scale(_body.game.bat_mask, (55, 55))
+            self.rect = self.image.get_rect()
+            self.body = _body
 
     def update(self):
         if self.body.mask_bool:

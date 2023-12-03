@@ -1,61 +1,15 @@
-fill screen white
-start with WHITE character on white earth
+NO MASK
+sky_is_over = FALSE
 
-0:04 - move black sky downwards to 300
+0:43 - swap player/earth to WHITE, BEAR
 
-0:15 - swap player/earth color to BLACK
-0:28-0:29 - launch 6 owls overhead
+1:10 -  TIGER
 
-0:29
-Even in the midst of flowing time,
-0:33
-I feel languid, look, spinning around and around
-0:36
-I can't even see the heart that's leaving me,
-0:39
-yes, I don't know
-0:43 - swap player/earth to WHITE
-I can't even get myself to move,
-0:47
-I continue to be washed down the cracks of time
-0:50
-I don't know anything about what's around me,
-0:53
-I'm just me and no more
-0:56.5
-Am I dreaming? Am I seeing nothing?
-1:00
-My words are useless even if I speak
-1:03
-I'm just tired of being sad,
-1:06.5
-"To feel nothing" is the best
-1:10
-Even if I were to speak these confusing words
-1:13.5
-It's just my heart and the sky above me
-1:17
-If I move myself away,
-1:20.5 - swap player/earth to BLACK
-If I change everything, I’ll turn it black
-1:25
-Is there a future for someone like me?
-1:28
-Do I exist in this world?
-1:31
-Is this painful now? Is it sad now?
-1:34.5
-Not even knowing myself
-1:38
-Even when I'm walking, I'm sick of it,
-1:42
-So how would I care for other people
-1:45
-If someone like me can change,
-1:48 - swap player/earth to WHITE
-if I can change, will I turn white?
+1:25 - swap player/earth to BLACK
 
-1:51 / 1:51.5 - launch 2 owls overhead
+1:38 - ZEBRA
+
+1:51 / 1:51.5 - swap player/earth to WHITE, sky_is_over = TRUE, launch 2 owls overhead
 1:52 - snail
 1:53 - bat / 1:53.5 snail
 1:54 - bat / 1:54.5 snail
@@ -79,56 +33,15 @@ snail
 
 2:08-2:13.5 - leafs falling
 
-2:06
-Even in the midst of flowing time,
-2:10
-I feel languid, look, spinning around and around
+2:11 - 2:13.5 - girl spins, TIGER
 
-2:11 - 2:13.5 - girl spins
+2:47 - BEAR
 
-2:13
-I can't even see the heart that's leaving me,
-2:17
-I can't see it, dont you see?
-2:20
-I can't even get myself to move,
-2:24
-I continue to be washed down the cracks of time
-2:27
-I don't know anything about what's around me,
-2:30
-I am me, and that's it
-2:34
-Am I dreaming? Or seeing nothing?
-2:37
-My words are useless even if I speak
-2:40.5
-I'm just tired of being sad,
-2:44
-I should go on without feeling anything
-2:47
-Even if I were to speak these confusing words
-2:51
-My heart just won't pay attention
-2:54
-If I were to move,
-2:58 - swap player/earth to BLACK
-Everything would return and I’d turn it black
+3:01 - swap player/earth to BLACK, ROOSTER, SUN GROWS, sky_is_over = FALSE
 
-3:01
-If I were to move, if I were to move
-3:05
-Then I'd break everything, I'd break everything
-3:08
-If I were to be sad, if I were to be sad
-3:12 - swap player/earth to WHITE
-Can my heart turn white?
+3:15 - swap player/earth to WHITE
 
-3:15
-I still don’t know about you,
-3:19
-About myself, about everything
-3:22
-If my eyes were to open,
-3:26 - swap player/earth to BLACK
-if I break everything, it just turns black
+3:30 - swap player/earth to BLACK, sky_is_over = TRUE, NO MASK, NO COLLISION, ACCELERATE ENEMIES, GROW SUN
+
+3:36.2 - GROW PLAYER
+3:37 - PLAYER BLOCKS SCREEN

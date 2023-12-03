@@ -7,23 +7,24 @@ from R_Game.scripts.player_sprite import Weapon
 
 
 class Snail(pygame.sprite.Sprite):
-    def __init__(self, game):
+    def __init__(self, game, direct_init=True):
         super().__init__()
         self.game = game
+        if direct_init:
+            self.anim_frames = [game.snail_1, game.snail_2]
+            self.anim_index = 0
+            self.image = self.anim_frames[self.anim_index]
+            self.rect = self.image.get_rect()
+            self.center = [0.0, 0.0]
+            self.speed = [0, 0]
 
-        self.anim_frames = [game.snail_1, game.snail_2]
-        self.anim_index = 0
-        self.image = self.anim_frames[self.anim_index]
-        self.rect = self.image.get_rect()
-        self.center = [0.0, 0.0]
-        self.speed = [0, 0]
 
-        if self.game.game_state == self.game.GameState.FIRST_GAME:
-            self.mask_bool = False
-        else:
-            self.mask_bool = True
-        self.mask = DogMask(self)
-        self.game.enemy_attachments.add(self.mask)
+            if self.game.game_state == self.game.GameState.FIRST_GAME:
+                self.mask_bool = False
+            else:
+                self.mask_bool = True
+            self.mask = DogMask(self)
+            self.game.enemy_attachments.add(self.mask)
 
     def set_speed(self, v_x=None, v_y=None):
         if v_x:
@@ -63,12 +64,12 @@ class Snail(pygame.sprite.Sprite):
 
 
 class DogMask(pygame.sprite.Sprite):
-    def __init__(self, _body):
+    def __init__(self, _body, direct_init=True):
         super().__init__()
-
-        self.image = pygame.transform.scale(_body.game.snail_mask, (35, 45))
-        self.rect = self.image.get_rect()
-        self.body = _body
+        if direct_init:
+            self.image = pygame.transform.scale(_body.game.snail_mask, (35, 45))
+            self.rect = self.image.get_rect()
+            self.body = _body
 
     def update(self):
         if self.body.mask_bool:

@@ -7,7 +7,7 @@ from R_Game.config.config import STOMP_SPEED
 
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self, game):
+    def __init__(self, game, direct_init=True):
         super().__init__()
 
         self.game = game
@@ -20,14 +20,15 @@ class Player(pygame.sprite.Sprite):
         self.a_pressed = False
         self.d_pressed = False  # Ну я ))))))
 
-        self.anim_frames = [self.game.player_walk_1,
-                            self.game.player_walk_2,
-                            self.game.player_jump]
-        self.anim_index = 0
+        if direct_init:
+            self.anim_frames = [self.game.player_walk_1,
+                                self.game.player_walk_2,
+                                self.game.player_jump]
+            self.anim_index = 0
 
-        self.image = self.anim_frames[self.anim_index]
-        self.rect = self.image.get_rect(midbottom=(80, 300))
-        self.center = [0.0, 0.0]
+            self.image = self.anim_frames[self.anim_index]
+            self.rect = self.image.get_rect(midbottom=(80, 300))
+            self.center = [0.0, 0.0]
 
         self.mask = None
         self.weapon = None
@@ -165,8 +166,9 @@ class Player(pygame.sprite.Sprite):
 
 
 class Mask(pygame.sprite.Sprite):
-    def __init__(self, _player: Player, mask='rooster'):
+    def __init__(self, _player, mask='rooster', direct_init=True):
         super().__init__()
+
         self.deflect = False
         self.bear_activation_time = None
 
@@ -177,51 +179,56 @@ class Mask(pygame.sprite.Sprite):
         self.punch_status = 'not active'
         self.punch_used = None
         self.punch = lambda: None
-        self.punch_sprite = Punch(_player)
-        _player.game.player_attachments.add(self.punch_sprite)
 
-        self.stomp_sprite = None
-        self.stomps = 0
+        if direct_init:
+            self.punch_sprite = Punch(_player)
 
-        if mask == 'rooster':
-            self.image = pygame.transform.scale(_player.game.rooster_mask, (90, 95))
-        elif mask == 'bear':
-            self.deflect = True
-            self.image = pygame.transform.scale(_player.game.bear_mask, (90, 80))
-            self.image.set_alpha(255)
-        elif mask == 'zebra':
-            self.image = pygame.transform.scale(_player.game.zebra_mask, (96, 90))
-            self.dash_status = 'ready'
-            self.dash = self.dash_process
-        elif mask == 'tiger':
-            self.image = pygame.transform.scale(_player.game.tiger_mask_normal, (90, 80))
-            self.punch_status = 'ready'
-            self.punch = self.punch_process
+            _player.game.player_attachments.add(self.punch_sprite)
 
-            self.stomp_sprite = Stomp(_player)
-            _player.game.player_attachments.add(self.stomp_sprite)
-            _player.game.player_attachments.change_layer(self.stomp_sprite, 1)
-        elif mask == 'frog':
-            self.image = pygame.transform.scale(_player.game.frog_mask, (85, 75))
-            self.deflect = True
+            self.stomp_sprite = None
+            self.stomps = 0
 
-            self.dash_status = 'ready'
-            self.dash = self.dash_process
 
-            self.punch_status = 'ready'
-            self.punch = self.punch_process
 
-            self.stomp_sprite = Stomp(_player)
-            _player.game.player_attachments.add(self.stomp_sprite)
-            _player.game.player_attachments.change_layer(self.stomp_sprite, 1)
-        else:
-            self.image = pygame.surface.Surface((90, 95))
-            self.image.set_alpha(0)
+            if mask == 'rooster':
+                self.image = pygame.transform.scale(_player.game.rooster_mask, (90, 95))
+            elif mask == 'bear':
+                self.deflect = True
+                self.image = pygame.transform.scale(_player.game.bear_mask, (90, 80))
+                self.image.set_alpha(255)
+            elif mask == 'zebra':
+                self.image = pygame.transform.scale(_player.game.zebra_mask, (96, 90))
+                self.dash_status = 'ready'
+                self.dash = self.dash_process
+            elif mask == 'tiger':
+                self.image = pygame.transform.scale(_player.game.tiger_mask_normal, (90, 80))
+                self.punch_status = 'ready'
+                self.punch = self.punch_process
 
-        self.type_ = mask
-        self.rect = self.image.get_rect()
-        self.body = _player
-        _player.mask = self
+                self.stomp_sprite = Stomp(_player)
+                _player.game.player_attachments.add(self.stomp_sprite)
+                _player.game.player_attachments.change_layer(self.stomp_sprite, 1)
+            elif mask == 'frog':
+                self.image = pygame.transform.scale(_player.game.frog_mask, (85, 75))
+                self.deflect = True
+
+                self.dash_status = 'ready'
+                self.dash = self.dash_process
+
+                self.punch_status = 'ready'
+                self.punch = self.punch_process
+
+                self.stomp_sprite = Stomp(_player)
+                _player.game.player_attachments.add(self.stomp_sprite)
+                _player.game.player_attachments.change_layer(self.stomp_sprite, 1)
+            else:
+                self.image = pygame.surface.Surface((90, 95))
+                self.image.set_alpha(0)
+
+            self.type_ = mask
+            self.rect = self.image.get_rect()
+            self.body = _player
+            _player.mask = self
 
     def deflect_ability(self):
         self.bear_activation_time = 600
@@ -296,6 +303,7 @@ class Mask(pygame.sprite.Sprite):
         self.dash()
         self.punch()
 
+
 class Punch(pygame.sprite.Sprite):
     def __init__(self, body):
         super().__init__()
@@ -309,14 +317,16 @@ class Punch(pygame.sprite.Sprite):
     def update(self):
         self.rect.midleft = self.body.rect.midright
 
+
 class Stomp(pygame.sprite.Sprite):
-    def __init__(self, body):
+    def __init__(self, body, direct_init=True):
         super().__init__()
 
-        self.image = body.game.stomp_image
-        self.image.set_alpha(0)
-        self.rect = self.image.get_rect()
-        self.body = body
+        if direct_init:
+            self.image = body.game.stomp_image
+            self.image.set_alpha(0)
+            self.rect = self.image.get_rect()
+            self.body = body
 
     def update(self):
         if self.body.speed[1] > STOMP_SPEED:
@@ -329,15 +339,16 @@ class Stomp(pygame.sprite.Sprite):
 
 
 class Weapon(pygame.sprite.Sprite):
-    def __init__(self, game, pos=None):
+    def __init__(self, game, pos=None, direct_init=True):
         super().__init__()
         self.game = game
 
-        self.og_image = pygame.transform.scale(game.weapon, (120, 60))
-        self.image = self.og_image
-        self.rect = self.image.get_rect()
-        if pos:
-            self.rect.midbottom = pos
+        if direct_init:
+            self.og_image = pygame.transform.scale(game.weapon, (120, 60))
+            self.image = self.og_image
+            self.rect = self.image.get_rect()
+            if pos:
+                self.rect.midbottom = pos
 
         self.ammo = game.max_ammo
         self.body = None
@@ -379,6 +390,3 @@ class Weapon(pygame.sprite.Sprite):
         else:
             self.rect.bottom = 303 + 3*math.cos(self.t*math.pi/1100)
             self.t = (self.t + self.game.delta_time)%2200
-
-
-
