@@ -538,7 +538,7 @@ class HMGame(object):
                 # enemy spawn
                 if event.type == self.enemy_spawn_timer:
                     if self.game_state == self.GameState.COLOR_BLIND and self.enemy_spawn:
-                        pass
+                        pass # TODO: spawn enemies
                     elif self.enemy_spawn:
                         next_enemy = self.enemy_spawn.pop(0)
                         if next_enemy == 'snail':
@@ -835,11 +835,10 @@ class HMGame(object):
         self.player_attachments.update()
         self.player.draw(self.screen)
         self.player_attachments.draw(self.screen)
-
-        self.enemy_group.update()
+        if time_pass_ms < 6000:
+            self.enemy_group.update()
+            self.enemy_attachments.update()
         self.enemy_group.draw(self.screen)
-
-        self.enemy_attachments.update()
         self.enemy_attachments.draw(self.screen)
 
         self.pickups.draw(self.screen)

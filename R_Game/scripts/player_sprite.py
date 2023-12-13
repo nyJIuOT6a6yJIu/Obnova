@@ -60,7 +60,7 @@ class Player(pygame.sprite.Sprite):
                     self.mask.punch_used = pygame.time.get_ticks()
                     self.game.swing_sound.play()
 
-        elif key_pressed == 3: # RMB
+        elif key_pressed == 3:  # RMB
             pickups = pygame.sprite.spritecollide(self, self.game.pickups, dokill=False)
             if pickups:
                 self.pick_up_weapon(pickups[0], event_pos)

@@ -4,6 +4,14 @@ from enum import Enum, auto
 from datetime import datetime
 from json import dumps
 
+# TODO: add alpha overlays, if transitions are not meant to be sharp
+#  add manual enemy spawn
+#  add snow to post sky rooster until color change
+#  add spinning girl and leaves
+#  add sun
+#  add player enlargement
+#  add ending sequence
+
 import pygame
 
 from R_Game.scripts.snail_sprite import Snail, DogMask
@@ -143,6 +151,79 @@ class CB_Player(Player):
         self.rect = self.image.get_rect(midbottom=(80, 300))
         self.center = center or [0.0, 0.0]
 
+    def player_input(self, key_pressed, released=False, event_pos=None):
+        if key_pressed == 1:
+            if self.weapon:
+                shot = self.game.shoot_at_enemy(event_pos)
+                self.weapon.shoot_at(shot)
+            else:
+                if self.mask.punch_status == 'ready':
+                    self.mask.punch_status = 'active'
+                    self.mask.punch_used = pygame.time.get_ticks()
+        else:
+            super().player_input(key_pressed, released, event_pos)
+
+    def _movement(self):
+        gravity_acc = self.game.gravity_acceleration
+        stiffness = self.game.ground_stiffness
+
+        if abs(self.rect.centerx - self.center[0]) > 2:
+            self.center[0] = self.rect.centerx
+        if abs(self.rect.centery - self.center[1]) > 2:
+            self.center[1] = self.rect.centery
+
+        if self.mask.dash_status != 'active':
+            self.speed[1] += gravity_acc * self.game.delta_time / 2000
+
+        self.center[0] += self.speed[0] * self.game.delta_time / 1000
+        self.center[1] += self.speed[1] * self.game.delta_time / 1000
+
+        self.rect.center = [int(self.center[0]), int(self.center[1])]
+
+        if not self.is_airborne():
+            self.rect.bottom = 300
+            self.speed[1] = 0
+            self.jumps = self.max_jumps
+        elif self.mask.dash_status != 'active':
+            self.speed[1] += gravity_acc * self.game.delta_time / 2000  # 1300 - stomp limit
+
+        if self.rect.left < 0:
+            self.rect.left = 0
+        elif self.rect.right > 780:
+            self.rect.right = 780
+
+        if self.mask.dash_status == 'active':
+            pass
+        else:
+            self.speed[0] = -375*bool(self.a_pressed) + 375*bool(self.d_pressed)
+
+        if not self.is_airborne():
+            minus = stiffness*self.game.delta_time / 1000
+            if abs(self.speed[0]) > abs(minus):
+                self.speed[0] -= minus*self.speed[0]/abs(self.speed[0])
+            else:
+                self.speed[0] = 0
+
+    def pick_up_weapon(self, weapon, event_pos=None):
+        if event_pos is not None and self.weapon:
+            self.drop_weapon(event_pos)
+        self.weapon = weapon
+        self.game.pickups.remove(weapon)
+        self.game.player_attachments.add(weapon)
+        weapon.set_body(self)
+
+    def drop_weapon(self, event_pos):
+        if self.weapon:
+            self.weapon.body = None
+            speed_x = event_pos[0] - self.rect.centerx
+            speed_y = event_pos[1] - self.rect.centery
+            speed = pygame.math.Vector2((speed_x, speed_y))
+            speed = speed.normalize()
+            speed_x = speed.x * 30
+            speed_y = speed.y * 30
+            self.weapon.speed = [speed_x, speed_y]
+            self.weapon = None
+
     def _animate(self):
         if self.rect.bottom < 300:
             self.image = self.anim_frames[2][self.source.color]
@@ -216,7 +297,7 @@ class CB_Mask(Mask):
             return
         _now = pygame.time.get_ticks()
         _time_spent = _now - self.punch_used
-        _final = 160 + int(2.5 * self.body.game.score)*bool(self.body.game.kills)
+        _final = 160 + int(2.5 * self.body.game.score)
         _time_by_punch = _time_spent % 160
 
         if _time_by_punch < 40:
@@ -265,14 +346,15 @@ class CB_Stomp(Stomp):
 class CB_Weapon(Weapon):
     def __init__(self, touhou, pos=None):
         super().__init__(touhou.game, pos, False)
-        self.og_images = touhou.game.gun_image
+        self.source = touhou
+        self.og_images = touhou.gun_image
         self.image = self.og_images[touhou.color]
         self.rect = self.image.get_rect()
         if pos:
             self.rect.midbottom = pos
 
     def shoot_at(self, shot):
-        if shot:
+        if self.ammo and shot:
             for enemy in shot:
                 self.game.score_add(f'{enemy.get_type()}_kill')
                 enemy.mask.kill()
@@ -284,8 +366,13 @@ class CB_Weapon(Weapon):
 
     def rotate(self):
         self.angle += -15
-        self.image = pygame.transform.rotozoom(self.og_image[self.body.source.color], self.angle, 1)
+        self.image = pygame.transform.rotozoom(self.og_images[self.source.color], self.angle, 1)
         self.rect = self.image.get_rect(center=self.rect.center)
+        
+    def update(self):
+        self.image = self.og_images[self.source.color]
+        super().update()
+
 
 class Touhou:
     def __init__(self, game):
@@ -299,6 +386,8 @@ class Touhou:
         self.sky_surf = pygame.Surface((800, 300))
         self.ground_surf = pygame.Surface((800, 100))
         self.foreground = pygame.Surface((800, 300))
+        self.overlay = pygame.Surface((800, 400))
+        self.foreground.set_alpha(45)
 
         self.score = 0
         self.delta_time = 1
@@ -355,6 +444,7 @@ class Touhou:
 
     def set_up_run(self):
         self.subtitles = SUBTITLES
+        self.sub_drawn = False
 
         self.sky_surf.fill('Black')
         self.ground_surf.fill('White')
@@ -400,27 +490,31 @@ class Touhou:
         self.game.fly_speed_range =  FLY_SPEED_RANGE
 
         self.sky_is_over = False  # Even though we can't afford
+        self.overlay.set_alpha(0)
 
         self.game.screen.fill('White')
 
-        self.game.music_handler.music_play(self.music)
+        # self.game.music_handler.music_play(self.music)
+        pygame.mixer_music.load('R_Game/audio/misc music/color_blind.mp3')
+        pygame.mixer_music.play(start=0.0)
+        self.game.screen.blit(self.ground_surf, (0, 300))
 
     def runtime_frame(self):
         now = pygame.time.get_ticks()
 
-        time_pass = now - self.start
-
-        self.game.screen.blit(self.ground_surf, (0, 300))
+        time_pass = now - self.start# + 83000
 
         if time_pass < 4000:
             y = (time_pass)//10
             self.game.screen.blit(self.sky_surf, (0, y-400))
         else:
-            self.game.screen.blit(self.sky_surf, (0, 0))
+            if not self.sky_is_over and self.game.mask_sprite.dash_status != 'active':
+                self.game.screen.blit(self.sky_surf, (0, 0))
 
         if time_pass > 14990 and time_pass < 20000:
             self.change_color(0)
             self.change_mask('rooster')
+
 
         elif time_pass > 42990 and time_pass < 45000:
             self.change_color(1)
@@ -430,13 +524,14 @@ class Touhou:
             self.change_mask('tiger')
 
         elif time_pass > 84990 and time_pass < 88000:
-            self.change_color(0)
+            self.change_color(0, True)
 
         elif time_pass > 97990 and time_pass < 100000:
             self.change_mask('zebra')
 
         elif time_pass > 110990 and time_pass < 115000:
             self.change_color(1)
+            self.sky_is_over = True
 
         elif time_pass > 130990 and time_pass < 133000:
             self.change_mask('tiger')
@@ -446,6 +541,7 @@ class Touhou:
 
         elif time_pass > 180990 and time_pass < 185000:
             self.change_color(0)
+            self.sky_is_over = False
             self.change_mask('rooster')
 
         elif time_pass > 194990 and time_pass < 198000:
@@ -453,21 +549,30 @@ class Touhou:
 
         elif time_pass > 209990 and time_pass < 212000:
             self.change_color(0)
+            self.sky_is_over = True
             self.change_mask('None')
 
-        self.game.player.update()
-        self.game.player_attachments.update()
+        if self.sky_is_over or self.game.mask_sprite.dash_status == 'active':
+            self.game.screen.blit(self.foreground, (0, 0))
+
+        if time_pass > 14990 or time_pass < 14490:
+            self.game.player.update()
+            self.game.player_attachments.update()
+
+            self.game.enemy_group.update()
+            self.game.enemy_attachments.update()
+
+            self.game.pickups.update()
+
         self.game.player.draw(self.game.screen)
         self.game.player_attachments.draw(self.game.screen)
 
-        self.game.enemy_group.update()
         self.game.enemy_group.draw(self.game.screen)
-
-        self.game.enemy_attachments.update()
         self.game.enemy_attachments.draw(self.game.screen)
 
-        self.game.pickups.update()
         self.game.pickups.draw(self.game.screen)
+
+        self.draw_overlay(time_pass=time_pass, transition_time=110990)
 
         self.draw_subtitles(time_pass)
 
@@ -484,14 +589,15 @@ class Touhou:
     # game.difficulty_scaling()
     # game.enter_the_sandman()
     #
-        if self.game.mask_sprite.dash_status != 'active' \
-                and not (self.game.mask_sprite.dash_status == 'cooldown' and self.game.player_sprite.is_airborne()) \
-                and self.game.enemy_collision():
-            if self.game.mask_sprite.deflect:
-                self.game.mask_sprite.deflect = False
-                self.game.mask_sprite.deflect_ability()
-            else:
-                self.game.game_state = self.game.GameState.DEFAULT_MENU
+        if time_pass <= 110200 or time_pass >= 113000:
+            if self.game.mask_sprite.dash_status != 'active' \
+                    and not (self.game.mask_sprite.dash_status == 'cooldown' and self.game.player_sprite.is_airborne()) \
+                    and self.game.enemy_collision():
+                if self.game.mask_sprite.deflect:
+                    self.game.mask_sprite.deflect = False
+                    self.game.mask_sprite.deflect_ability()
+                else:
+                    self.game.game_state = self.game.GameState.DEFAULT_MENU
 
         self.game.game_over()
 
@@ -502,36 +608,55 @@ class Touhou:
     #     game.ground_surf.set_alpha(max(365 - 3 * int(game.score), 50))
     #     game.screen.blit(game.sky_color_foreground, (0, 0))
 
+    def draw_overlay(self, time_pass=None, transition_time=None):
+        if time_pass > 110200 and time_pass < 113000:
+            _alpha = pygame.math.clamp((255 - (255/700)*abs(transition_time - time_pass)), 0, 255)
+            self.overlay.set_alpha(_alpha)
+            if _alpha:
+                self.game.screen.blit(self.overlay, (0, 0))
+
     def draw_subtitles(self, time_pass):
         if self.subtitles is None or self.subtitles == []:
             return
         current_subtitle = self.subtitles[0]
-        if time_pass > current_subtitle[0]: # pora
+        if time_pass > current_subtitle[0] and not self.sub_drawn: # pora
+            self.sub_drawn = True
             jap_text_surf = self.game.text_to_surface_jf(current_subtitle[2], True, ['White', 'Black'][self.color], size=26)
             eng_text_surf = self.game.text_to_surface_mf(current_subtitle[3], True, ['White', 'Black'][self.color], size=36)
             _alpha = 255
+
             if current_subtitle[1] == 129990 and time_pass - current_subtitle[0] < 800:
                 _alpha = pygame.math.clamp((time_pass - current_subtitle[0]) * 255 // 800, 0, 255)
                 jap_text_surf.set_alpha(_alpha)
                 eng_text_surf.set_alpha(_alpha)
+                self.game.screen.blit(self.ground_surf, (0, 300))
+                self.sub_drawn = False
             if current_subtitle[1] in [110990, 209000] and current_subtitle[1] - time_pass < 1200:
                 _alpha = pygame.math.clamp((current_subtitle[1] - time_pass) * 255 // 1200, 0, 255)
                 jap_text_surf.set_alpha(_alpha)
                 eng_text_surf.set_alpha(_alpha)
+                self.game.screen.blit(self.ground_surf, (0, 300))
+                self.sub_drawn = False
             jap_text_rect = jap_text_surf.get_rect(center=(400, 330))
             eng_text_rect = eng_text_surf.get_rect(center=(400, 370))
             self.game.screen.blit(jap_text_surf, jap_text_rect)
             self.game.screen.blit(eng_text_surf, eng_text_rect)
         if time_pass > current_subtitle[1]:
             self.subtitles.pop(0)
+            self.sub_drawn = False
+            self.game.screen.blit(self.ground_surf, (0, 300))
 
-    def change_color(self, new_color):
+    def change_color(self, new_color, include_overlay=False):
         if self.color == new_color:
             return
+
         self.color = new_color
         self.ground_surf.fill(['Black', 'White'][self.color])
         self.sky_surf.fill(['White', 'Black'][self.color])
         self.foreground.fill(['White', 'Black'][self.color])
+        if include_overlay:
+            self.overlay.fill(['White', 'Black'][self.color])
+        self.game.screen.blit(self.ground_surf, (0, 300))
 
     def change_mask(self, new_mask):
         if self.game.mask_sprite.type_ == new_mask:
@@ -539,3 +664,8 @@ class Touhou:
         self.game.mask_sprite.kill()
         self.game.mask_sprite = CB_Mask(self.game.player_sprite, new_mask)
         self.game.player_attachments.add(self.game.mask_sprite)
+        if self.game.player_sprite.weapon:
+            self.game.player_sprite.weapon.kill()
+        self.game.player_sprite.weapon = None
+        if new_mask in ['rooster', 'bear']:
+            self.game.player_sprite.pick_up_weapon(CB_Weapon(self))
