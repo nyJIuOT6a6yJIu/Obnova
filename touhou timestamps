@@ -1,13 +1,6 @@
 NO MASK
 sky_is_over = FALSE
 
-0:43 - swap player/earth to WHITE, BEAR
-
-1:10 -  TIGER
-
-1:25 - swap player/earth to BLACK
-
-1:38 - ZEBRA
 
 1:51 / 1:51.5 - swap player/earth to WHITE, sky_is_over = TRUE, launch 2 owls overhead
 1:52 - snail

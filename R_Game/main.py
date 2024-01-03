@@ -131,9 +131,9 @@ class HMGame(object):
 
     def start_game(self):
 
-        # self.load_images()
-        #
-        # pygame.display.set_icon(self.rooster_mask)
+        self.load_images()
+
+        pygame.display.set_icon(self.rooster_mask)
 
         self.mouse = pygame.sprite.Sprite()
         self.mouse.image = pygame.Surface((2, 2))
@@ -145,70 +145,70 @@ class HMGame(object):
 
         self.game_name_surf = self.text_to_surface_mf('Hohline Cherkasy', True, 'Red')
 
-        # self.sky_color_surf = pygame.Surface((800, 250))
-        # self.sky_color_foreground = pygame.Surface((800, 400))
-        # self.sky_color = ColorSine(phases= [math.pi * 0.5, math.pi * 0.7, 0.0],
-        #                            freqs=  [1.1,           0.2,           1.0],
-        #                            statics=[0.5,           0.7,           0.7],
-        #                            ampls=  [0.5,           0.3,           0.3])
-        #
-        # self.player_menu = pygame.transform.rotozoom(self.player_stand, 0, 3)
-        # self.player_menu_rect = self.player_menu.get_rect(center=(179, 200))
-        # self.frog_menu = pygame.transform.scale(self.frog_mask, (225, 195))
-        # self.frog_menu_rect = self.frog_menu.get_rect(midtop=[self.player_menu_rect.centerx+3, self.player_menu_rect.top-10])
-        # self.wasted_surf = self.text_to_surface_mf('[REDACTED]', True, 'White', 'Black', 48)
-        # self.wasted_rect = self.wasted_surf.get_rect(center=(179, 181))
-        #
-        # self.screen.blit(pygame.image.load('R_Game/graphics/banners/loading_2.png'), (0, 0))
-        # _warning_text_ = self.text_to_surface_mf('WARNING: Game contains flashing lights', True, (40, 40, 40), size=40)
-        # _rect_ = _warning_text_.get_rect(center=(400, 370))
-        # self.screen.blit(_warning_text_, _rect_)
-        # pygame.display.update()
-        #
-        # self.load_sounds()
+        self.sky_color_surf = pygame.Surface((800, 250))
+        self.sky_color_foreground = pygame.Surface((800, 400))
+        self.sky_color = ColorSine(phases= [math.pi * 0.5, math.pi * 0.7, 0.0],
+                                   freqs=  [1.1,           0.2,           1.0],
+                                   statics=[0.5,           0.7,           0.7],
+                                   ampls=  [0.5,           0.3,           0.3])
+
+        self.player_menu = pygame.transform.rotozoom(self.player_stand, 0, 3)
+        self.player_menu_rect = self.player_menu.get_rect(center=(179, 200))
+        self.frog_menu = pygame.transform.scale(self.frog_mask, (225, 195))
+        self.frog_menu_rect = self.frog_menu.get_rect(midtop=[self.player_menu_rect.centerx+3, self.player_menu_rect.top-10])
+        self.wasted_surf = self.text_to_surface_mf('[REDACTED]', True, 'White', 'Black', 48)
+        self.wasted_rect = self.wasted_surf.get_rect(center=(179, 181))
+
+        self.screen.blit(pygame.image.load('R_Game/graphics/banners/loading_2.png'), (0, 0))
+        _warning_text_ = self.text_to_surface_mf('WARNING: Game contains flashing lights', True, (40, 40, 40), size=40)
+        _rect_ = _warning_text_.get_rect(center=(400, 370))
+        self.screen.blit(_warning_text_, _rect_)
+        pygame.display.update()
+
+        self.load_sounds()
 
         self.music_handler = MusicHandler()
 
-        # self.gun_sound.set_volume(1.1)
-        # self.empty_gun_sound.set_volume(1.1)
-        # self.gun_pickup_sound.set_volume(0.8)
-        # self.throw_sound.set_volume(4.5)
-        # self.swing_sound.set_volume(3.0)
-        # self.punch_sound.set_volume(4.0)
-        # self.stomp_sound.set_volume(4.0)
-        #
-        # self.kill_run_init_sound.set_volume(1.5)
-        #
-        # self.death_sound.set_volume(1.3)
-        # self.death_sound_2.set_volume(1.3)
-        # self.death_sound_3.set_volume(6)
-        # self.death_sound_4.set_volume(2.3)
-        #
-        # self.first_run_music.set_volume(0.2)
-        #
-        # self.run_music_1.set_volume(0.3)
-        # self.run_music_2.set_volume(0.3)
-        # self.run_music_3.set_volume(0.3)
-        #
-        # self.bear_music.set_volume(0.4)
-        # self.zebra_music.set_volume(0.4)
-        # self.tiger_music.set_volume(0.8)
-        #
-        # self.post_bear_music.set_volume(0.4)
-        # self.post_zebra_music.set_volume(0.4)
-        # self.post_tiger_music.set_volume(0.4)
-        #
-        # self.menu_music.set_volume(0.2)
-        #
-        # self.enter_the_sandman_music.set_volume(0.8)
-        # self.enter_the_siemen_music.set_volume(1.1)
-        #
-        # self.nuke_music.set_volume(1.0)
-        # self.post_nuke_music.set_volume(0.6)
-        #
-        # self.pacifist_speech.set_volume(3.0)
-        # self.pacifist_speech_2.set_volume(3.0)
-        # self.pacifist_menu_music.set_volume(0.5)
+        self.gun_sound.set_volume(1.1)
+        self.empty_gun_sound.set_volume(1.1)
+        self.gun_pickup_sound.set_volume(0.8)
+        self.throw_sound.set_volume(4.5)
+        self.swing_sound.set_volume(3.0)
+        self.punch_sound.set_volume(4.0)
+        self.stomp_sound.set_volume(4.0)
+
+        self.kill_run_init_sound.set_volume(1.5)
+
+        self.death_sound.set_volume(1.3)
+        self.death_sound_2.set_volume(1.3)
+        self.death_sound_3.set_volume(6)
+        self.death_sound_4.set_volume(2.3)
+
+        self.first_run_music.set_volume(0.2)
+
+        self.run_music_1.set_volume(0.3)
+        self.run_music_2.set_volume(0.3)
+        self.run_music_3.set_volume(0.3)
+
+        self.bear_music.set_volume(0.4)
+        self.zebra_music.set_volume(0.4)
+        self.tiger_music.set_volume(0.8)
+
+        self.post_bear_music.set_volume(0.4)
+        self.post_zebra_music.set_volume(0.4)
+        self.post_tiger_music.set_volume(0.4)
+
+        self.menu_music.set_volume(0.2)
+
+        self.enter_the_sandman_music.set_volume(0.8)
+        self.enter_the_siemen_music.set_volume(1.1)
+
+        self.nuke_music.set_volume(1.0)
+        self.post_nuke_music.set_volume(0.6)
+
+        self.pacifist_speech.set_volume(3.0)
+        self.pacifist_speech_2.set_volume(3.0)
+        self.pacifist_menu_music.set_volume(0.5)
 
         self.cb_mode = Touhou(self)
 
@@ -216,20 +216,21 @@ class HMGame(object):
 
         self.score = -1
         self.delta_time = 1
+        self.kills = 0
 
         self.UI_colorblind = pygame.sprite.Group(CheckBox(self, 'Colorblind mode', (120, 20)))
 
-        # if self.progress.get('deaths', 0) == 0 and not self.progress.get("color_blind_unlocked", False):
-        #     self.set_up_game('first')
-        # else:
-        #     self.game_state = self.GameState.DEFAULT_MENU
-        #     self.music_handler.music_play(self.menu_music)
+        if self.progress.get('deaths', 0) == 0 and not self.progress.get("color_blind_unlocked", False):
+            self.set_up_game('first')
+        else:
+            self.game_state = self.GameState.DEFAULT_MENU
+            self.music_handler.music_play(self.menu_music)
 
-        # TODO: delete
-        self.game_state = self.GameState.COLOR_BLIND
-        self.cb_mode.start = pygame.time.get_ticks()
-        self.cb_mode.set_up_run()
-        # TODO
+        # # TODO: delete
+        # self.game_state = self.GameState.COLOR_BLIND
+        # self.cb_mode.start = pygame.time.get_ticks()
+        # self.cb_mode.set_up_run()
+        # # TODO
 
         return self.game_loop()
 
@@ -384,6 +385,7 @@ class HMGame(object):
 
     def set_up_game(self, _mode='rooster'):
         if self.UI_colorblind.sprites()[0].state:
+            self.music_handler.music_stop(300)
             self.game_state = self.GameState.COLOR_BLIND
             self.cb_mode.start = pygame.time.get_ticks()
             return self.cb_mode.set_up_run()
@@ -536,10 +538,16 @@ class HMGame(object):
 
 
                 # enemy spawn
-                if event.type == self.enemy_spawn_timer:
-                    if self.game_state == self.GameState.COLOR_BLIND and self.enemy_spawn:
-                        pass # TODO: spawn enemies
-                    elif self.enemy_spawn:
+                if event.type == self.enemy_spawn_timer and self.game_state == self.GameState.COLOR_BLIND:
+
+                    if self.enemy_spawn:
+                        pass
+                    else:
+                        self.cb_mode.spawn_new_enemy()
+                        pygame.time.set_timer(self.enemy_spawn_timer, self.enemy_spawn_interval, 1)
+
+                elif event.type == self.enemy_spawn_timer:
+                    if self.enemy_spawn:
                         next_enemy = self.enemy_spawn.pop(0)
                         if next_enemy == 'snail':
                             self.add_new_enemy(1, 0)
@@ -735,7 +743,7 @@ class HMGame(object):
         tiger_game_surf = self.text_to_surface_mf(tiger_game_line, True, 'Red')
         tiger_game_rect = tiger_game_surf.get_rect(midleft=(415, 290))
         frog_game_surf = self.text_to_surface_mf(frog_game_line, True, 'Pink')
-        frog_game_rect = frog_game_surf.get_rect(midleft=(40, 20))
+        frog_game_rect = frog_game_surf.get_rect(midleft=(365, 20))
 
         self.screen.blit(final_score_surf, final_score_rect)
         self.screen.blit(rooster_game_surf, rooster_game_rect)
@@ -1034,7 +1042,7 @@ class HMGame(object):
         for weapon in self.player_attachments:
             if isinstance(weapon, Punch) and self.mask_sprite.punch_status == 'active':
                 collisions = pygame.sprite.spritecollide(weapon, self.enemy_group, False)
-                if collisions:
+                if collisions and self.game_state != self.GameState.COLOR_BLIND:
                     self.punch_sound.play()
                 for i in collisions:
                     self.score_add(f'{i.get_type()}_kill')
@@ -1048,7 +1056,7 @@ class HMGame(object):
                     self.score_add(f'{i.get_type()}_kill')
                     self.mask_sprite.punch_status = 'cooldown'
                     self.mask_sprite.punch_used = pygame.time.get_ticks() - 165 - int(2.5 * self.score)
-                    if isinstance(i, Snail):
+                    if isinstance(i, Snail) and self.game_state != self.GameState.COLOR_BLIND:
                         self.enemy_attachments.add(Stomped_Snail(self, [self.player_sprite.rect.centerx, 300]))
                     i.mask.kill()
                     i.kill()
@@ -1067,7 +1075,8 @@ class HMGame(object):
 
             if collisions and self.mask_sprite.type_ not in ['tiger', 'frog']:
                 weapon.kill()
-                self.punch_sound.play()
+                if self.game_state != self.GameState.COLOR_BLIND:
+                    self.punch_sound.play()
 
     def aim_at_enemy(self):
         if bool(self.enemy_group.get_sprites_at(pygame.mouse.get_pos())):
@@ -1260,6 +1269,8 @@ class HMGame(object):
         return _font.render(text, antialias, color, bg)
 
     def score_add(self, mode: str):
+        if self.game_state == self.GameState.COLOR_BLIND:
+            return
         if mode.endswith('kill'):
             if self.kills == 0:
                 self.kill_run_init_sound.play()

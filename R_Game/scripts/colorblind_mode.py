@@ -4,12 +4,12 @@ from enum import Enum, auto
 from datetime import datetime
 from json import dumps
 
-# TODO: add alpha overlays, if transitions are not meant to be sharp
-#  add manual enemy spawn
+# TODO:
+#  add UI (!!!)
 #  add snow to post sky rooster until color change
 #  add spinning girl and leaves
 #  add sun
-#  add player enlargement
+#  add player enlargement (menu sprite)
 #  add ending sequence
 
 import pygame
@@ -56,7 +56,7 @@ class CB_Snail(Snail):
 class CB_DogMask(DogMask):
     def __init__(self, _body):
         super().__init__(_body, direct_init=False)
-        self.images = _body.source.snail_mask
+        self.images = _body.source.dog_mask
         self.image = self.images[_body.source.color]
         self.rect = self.image.get_rect()
         self.body = _body
@@ -121,7 +121,7 @@ class CB_Bat(Bat):
         self.anim_index += 4.8 * self.game.delta_time / 1000
         if self.anim_index >= 2:
             self.anim_index = 0
-        self.image = self.anim_frames[int(self.anim_index)][self.body.source.color]
+        self.image = self.anim_frames[int(self.anim_index)][self.source.color]
 
 
 class CB_BatMask(BatMask):
@@ -256,6 +256,8 @@ class CB_Mask(Mask):
             self.images[0].set_alpha(255)
             self.images[1].set_alpha(255)
             self.image = self.images[_player.source.color]
+            self.bear_banner = pygame.Surface((800, 300))
+            self.bear_banner.fill('White')
 
         elif _type == 'zebra':
             self.images = _player.source.zebra_mask
@@ -274,41 +276,43 @@ class CB_Mask(Mask):
         else:
             self.images = [pygame.surface.Surface((90, 95)), pygame.surface.Surface((90, 95))]
             self.image = self.images[_player.source.color]
-            self.image.set_alpha(0)
+            self.images[0].set_alpha(0)
+            self.images[1].set_alpha(0)
 
         self.type_ = _type
         self.rect = self.image.get_rect()
         self.body = _player
         _player.mask = self
 
+        self.culmination = False
+
     def deflect_ability(self):
         self.bear_activation_time = 600
         for enemy in self.body.game.enemy_group:
-            self.body.game.score_add(f'{enemy.get_type()}_kill')
             enemy.mask.kill()
             enemy.kill()
             # self.body.game.kill_run = True
 
     def dash_cd(self):
-        return 1300 + self.dash_used - pygame.time.get_ticks()
+        return 1300 + self.dash_used - pygame.time.get_ticks() - 700 * bool(self.culmination)
 
     def punch_process(self):
         if self.punch_used is None:
             return
         _now = pygame.time.get_ticks()
         _time_spent = _now - self.punch_used
-        _final = 160 + int(2.5 * self.body.game.score)
+        _final = 160 + int(2.5 * self.body.source.score)
         _time_by_punch = _time_spent % 160
 
-        if _time_by_punch < 40:
+        if self.punch_status != 'cooldown' and _time_by_punch < 40:
             self.punch_sprite.image = self.body.source.punch_1[self.body.source.color]
-        elif _time_by_punch < 60:
+        elif self.punch_status != 'cooldown' and _time_by_punch < 60:
             self.punch_sprite.image = self.body.source.punch_2[self.body.source.color]
-        elif _time_by_punch < 100:
+        elif self.punch_status != 'cooldown' and _time_by_punch < 100:
             self.punch_sprite.image = self.body.source.punch_3[self.body.source.color]
-        elif _time_by_punch < 120:
+        elif self.punch_status != 'cooldown' and _time_by_punch < 120:
             self.punch_sprite.image = self.body.source.punch_4[self.body.source.color]
-        elif _time_by_punch < 160:
+        elif self.punch_status != 'cooldown' and _time_by_punch < 160:
             self.punch_sprite.image = self.body.source.punch_5[self.body.source.color]
         if _time_spent > _final:
             self.punch_status = 'cooldown'
@@ -318,11 +322,23 @@ class CB_Mask(Mask):
             self.punch_used = None
 
     def punch_cd(self):
-        return 950 - self.body.game.score + self.punch_used - pygame.time.get_ticks()
+        return 950 - self.body.source.score + self.punch_used - pygame.time.get_ticks()
 
     def update(self):
         self.image = self.images[self.body.source.color]
-        super().update()
+        match self.type_:
+            case 'rooster':
+                self.rect.center = (self.body.rect.midtop[0] + 7, self.body.rect.midtop[1] + 23)
+            case 'bear':
+                self.rect.center = (self.body.rect.midtop[0], self.body.rect.midtop[1] + 23)
+            case 'zebra':
+                self.rect.center = (self.body.rect.center[0] + 3, self.body.rect.center[1] - 10)
+            case 'tiger':
+                self.rect.center = (self.body.rect.midtop[0], self.body.rect.midtop[1] + 23)
+            case 'frog':
+                self.rect.center = (self.body.rect.midtop[0], self.body.rect.midtop[1] + 23)
+        self.dash()
+        self.punch()
 
 
 class CB_Stomp(Stomp):
@@ -356,7 +372,6 @@ class CB_Weapon(Weapon):
     def shoot_at(self, shot):
         if self.ammo and shot:
             for enemy in shot:
-                self.game.score_add(f'{enemy.get_type()}_kill')
                 enemy.mask.kill()
                 enemy.kill()
 
@@ -390,7 +405,7 @@ class Touhou:
         self.foreground.set_alpha(45)
 
         self.score = 0
-        self.delta_time = 1
+        self.last_rescale_score = None
 
         self.player_mask = None
 
@@ -440,10 +455,22 @@ class Touhou:
         self.punch_4 = [pygame.image.load(path + 'punch_2-5_black.png'), pygame.image.load(path + 'punch_2-5_white.png')]
         self.punch_5 = [pygame.image.load(path + 'punch_3_black.png'), pygame.image.load(path + 'punch_3_white.png')]
 
+        # self.punch_1[0].set_alpha(100)
+        # self.punch_2[0].set_alpha(100)
+        # self.punch_3[0].set_alpha(100)
+        # self.punch_4[0].set_alpha(100)
+        # self.punch_5[0].set_alpha(100)
+        #
+        # self.punch_1[1].set_alpha(100)
+        # self.punch_2[1].set_alpha(100)
+        # self.punch_3[1].set_alpha(100)
+        # self.punch_4[1].set_alpha(100)
+        # self.punch_5[1].set_alpha(100)
+
         self.stomp_image = [pygame.image.load(path + 'stomp_black.png'), pygame.image.load(path + 'stomp_white.png')]
 
     def set_up_run(self):
-        self.subtitles = SUBTITLES
+        self.subtitles = list(i for i in SUBTITLES)
         self.sub_drawn = False
 
         self.sky_surf.fill('Black')
@@ -451,7 +478,7 @@ class Touhou:
         self.foreground.fill('Black')
 
         self.game.max_ammo = MAX_AMMO_CAPACITY
-        self.game.pickup_rate = PICKUP_DROP_RATE  # percentage chance
+        self.game.pickup_rate = -100
         self.game.pickups = pygame.sprite.LayeredUpdates()
 
         self.game.player = pygame.sprite.GroupSingle()
@@ -463,13 +490,27 @@ class Touhou:
         self.game.mask_sprite = CB_Mask(self.game.player_sprite, None)
         self.game.player_attachments.add(self.game.mask_sprite)
 
-        self.game.enemy_spawn = None #[None, None, 'snail', 'snail', 'fly', 'snail', None]
+        # list(type, spawn time, spawn location, spawn speed, args)
+        self.game.enemy_spawn = [['snail', 4500, None, -400, 0], ['snail', 6000, None, -400, 0],
+                                 ['fly', 7500, 150, -450, 0],    ['snail', 9000, None, -400, 0]]
 
 
         self.game.enemy_group = pygame.sprite.LayeredUpdates()
         self.game.enemy_attachments = pygame.sprite.LayeredUpdates()
 
+        self.color = 1  # 0 - black character, 1 - white character
+
+        self.start = pygame.time.get_ticks()
+
+        self.foreground.set_alpha(45)
+
         self.score = 0
+        self.last_rescale_score = None
+
+        self.player_mask = None
+
+        self.sky_is_over = False
+        self.maskless_enemies = True
 
         self.game.gunshot_afterimage = []
 
@@ -496,13 +537,13 @@ class Touhou:
 
         # self.game.music_handler.music_play(self.music)
         pygame.mixer_music.load('R_Game/audio/misc music/color_blind.mp3')
-        pygame.mixer_music.play(start=0.0)
+        pygame.mixer_music.play(start=0.0)#84.0)
         self.game.screen.blit(self.ground_surf, (0, 300))
 
     def runtime_frame(self):
         now = pygame.time.get_ticks()
 
-        time_pass = now - self.start# + 83000
+        time_pass = now - self.start# + 84000
 
         if time_pass < 4000:
             y = (time_pass)//10
@@ -514,43 +555,85 @@ class Touhou:
         if time_pass > 14990 and time_pass < 20000:
             self.change_color(0)
             self.change_mask('rooster')
+            self.maskless_enemies = False
+            self.score = 29
 
 
         elif time_pass > 42990 and time_pass < 45000:
             self.change_color(1)
             self.change_mask('bear')
+            self.score = 69  # nice
 
         elif time_pass > 69990 and time_pass < 73000:
             self.change_mask('tiger')
+            self.score = 89
 
         elif time_pass > 84990 and time_pass < 88000:
             self.change_color(0, True)
-
-        elif time_pass > 97990 and time_pass < 100000:
             self.change_mask('zebra')
 
-        elif time_pass > 110990 and time_pass < 115000:
+        elif time_pass > 97990 and time_pass < 100000:
+            pass
+            # self.change_mask('zebra')
+
+        elif time_pass > 109690 and time_pass < 111000:
+            if not self.game.enemy_spawn:
+                self.game.mask_sprite.culmination = True
+                # list(type, spawn time, spawn location, spawn speed, args)
+                self.game.enemy_spawn = [['fly', 111400, 140, -750, 0], ['fly', 111800, 140, -720, 0],
+                                         ['snail', 112000, 300, -650, 0], ['bat', 113000, 130, -650, 20],
+                                         ['snail', 113500, 300, -650, 0], ['bat', 114000, 130, -650, 20],
+                                         ['snail', 114500, 300, -650, 0], ['bat', 115000, 130, -650, 20],
+                                         ['snail', 115500, 300, -650, 0], ['snail', 115680, 300, -650, 20],
+                                         ['snail', 115830, 150, -650, 20], ['bat', 116000, 130, -650, 20],
+                                         ['snail', 116500, 150, -650, 20], ['bat', 117000, 130, -650, 20],
+                                         ['snail', 117500, 150, -650, 20], ['bat', 118000, 130, -650, 20],
+                                         ['snail', 118500, 300, -650, 0], ['snail', 118680, 300, -650, 20],
+
+                                         ['snail', 119500, 300, -650, 0], ['bat', 120000, 130, -650, 20],
+                                         ['snail', 120500, 300, -650, 0], ['bat', 121000, 130, -650, 20],
+                                         ['snail', 121500, 300, -650, 0], ['bat', 122000, 130, -650, 20],
+                                         ['snail', 122500, 300, -650, 0], ['snail', 122680, 300, -650, 20],
+                                         ['snail', 122830, 150, -650, 20], ['bat', 123000, 130, -650, 20],
+                                         ['snail', 123500, 150, -650, 20], ['bat', 124000, 130, -650, 20],
+                                         ['snail', 124500, 150, -650, 20], ['bat', 125000, 130, -650, 20],
+                                         ['fly', 125400, 100, -760, 0], ['fly', 125500, 140, -755, 0],
+                                         ['fly', 125600, 70, -750, 0], ['fly', 125700, 120, -745, 0],
+                                         ['fly', 125800, 80, -740, 0], ['fly', 125900, 60, -735, 0],
+                                         ['snail', 126500, 150, -420, 20]
+                                         ]
+
+        elif time_pass > 110990 and time_pass < 111390:
             self.change_color(1)
             self.sky_is_over = True
+            self.score = 110
 
-        elif time_pass > 130990 and time_pass < 133000:
+
+
+
+        elif time_pass > 130990 and time_pass < 133000: # TODO: do this on collision
             self.change_mask('tiger')
+            self.score = 115
 
         elif time_pass > 166990 and time_pass < 170000:
             self.change_mask('bear')
+            self.score = 137
 
         elif time_pass > 180990 and time_pass < 185000:
             self.change_color(0)
             self.sky_is_over = False
             self.change_mask('rooster')
+            self.score = 90
 
         elif time_pass > 194990 and time_pass < 198000:
             self.change_color(1)
+            self.score = 95
 
         elif time_pass > 209990 and time_pass < 212000:
             self.change_color(0)
             self.sky_is_over = True
             self.change_mask('None')
+            self.score = 137
 
         if self.sky_is_over or self.game.mask_sprite.dash_status == 'active':
             self.game.screen.blit(self.foreground, (0, 0))
@@ -577,19 +660,24 @@ class Touhou:
         self.draw_subtitles(time_pass)
 
         self.game.weapon_collision()
-    #
-    # game.draw_laser_sight()
-    # game.draw_shot_after_image()
+
+        self.spawn_new_enemy(time_pass)
+
+        self.difficulty_scaling()
+
+        self.draw_shot_after_image()
+
+        # TODo: draw skill cd
+        self.draw_spec_abilities()
+
+    # TODO:
     # game.draw_out_of_bounds_marker()
-    # game.draw_tool_tips()
     # game.draw_ammo_count()
     # game.draw_jumps_count()
-    # game.draw_spec_abilities()
-    #
-    # game.difficulty_scaling()
-    # game.enter_the_sandman()
-    #
-        if time_pass <= 110200 or time_pass >= 113000:
+
+
+
+        if time_pass <= 110200 or time_pass >= 113000: # or (time_pass > 97990 and time_pass < 98490):
             if self.game.mask_sprite.dash_status != 'active' \
                     and not (self.game.mask_sprite.dash_status == 'cooldown' and self.game.player_sprite.is_airborne()) \
                     and self.game.enemy_collision():
@@ -598,19 +686,27 @@ class Touhou:
                     self.game.mask_sprite.deflect_ability()
                 else:
                     self.game.game_state = self.game.GameState.DEFAULT_MENU
+                    # self.game.music_handler.music_stop(500)
+                    self.game.enemy_spawn = list()
+                    pygame.mixer_music.stop()
 
         self.game.game_over()
 
 
-    #
-    # if game.sky_is_over or game.mask_sprite.dash_status == 'active':
-    #     game.sky_color_foreground.set_alpha(max(int(game.score) - 50, 60))
-    #     game.ground_surf.set_alpha(max(365 - 3 * int(game.score), 50))
-    #     game.screen.blit(game.sky_color_foreground, (0, 0))
+    def draw_spec_abilities(self):
+        if self.game.mask_sprite.bear_activation_time is not None:
+            _alpha = int(255 * math.sin(1 + (600 - self.game.mask_sprite.bear_activation_time)/300))
+            self.game.mask_sprite.bear_banner.set_alpha(_alpha)
+            self.game.mask_sprite.bear_activation_time -= self.game.delta_time
+            self.game.screen.blit(self.game.mask_sprite.bear_banner, (0, 0))
+            if self.game.mask_sprite.bear_activation_time < 0:
+                self.game.mask_sprite.bear_activation_time = None
+        else:
+            self.game.mask_sprite.bear_activation_time = None
 
     def draw_overlay(self, time_pass=None, transition_time=None):
         if time_pass > 110200 and time_pass < 113000:
-            _alpha = pygame.math.clamp((255 - (255/700)*abs(transition_time - time_pass)), 0, 255)
+            _alpha = int(pygame.math.clamp((255 - (255/700)*abs(transition_time - time_pass)), 0, 255))
             self.overlay.set_alpha(_alpha)
             if _alpha:
                 self.game.screen.blit(self.overlay, (0, 0))
@@ -646,6 +742,15 @@ class Touhou:
             self.sub_drawn = False
             self.game.screen.blit(self.ground_surf, (0, 300))
 
+    def draw_shot_after_image(self):
+        for index, i in enumerate(self.game.gunshot_afterimage):
+            if i[1] > 0.0:
+                pygame.draw.line(self.game.screen, ['Black', 'White'][self.color], (self.game.player_sprite.weapon.rect.midright[0]-8, self.game.player_sprite.weapon.rect.midright[1]-4), i[0],
+                             width=int(6 * math.sin(i[1]*math.pi/100.0)))
+                i[1] -= 1 + (2 * self.game.delta_time) // 3
+            else:
+                self.game.gunshot_afterimage.pop(index)
+
     def change_color(self, new_color, include_overlay=False):
         if self.color == new_color:
             return
@@ -669,3 +774,71 @@ class Touhou:
         self.game.player_sprite.weapon = None
         if new_mask in ['rooster', 'bear']:
             self.game.player_sprite.pick_up_weapon(CB_Weapon(self))
+
+    def spawn_new_enemy(self, time_spent=None):
+        if not self.game.enemy_spawn and time_spent is None:
+            if random.randint(1, 5) <= 2:
+                if self.sky_is_over and random.randint(1, 2) == 1:
+                    a = CB_Bat(self)
+                    a.rect.bottomleft = (
+                    random.randint(self.game.enemy_placement_range[0], self.game.enemy_placement_range[1] + 100),
+                    150)
+                    a.set_speed(v_x=-1 * random.randint(self.game.fly_speed_range[0] - 50, self.game.fly_speed_range[1] - 50))
+                    a.set_difficulty((int(self.score) - 99) // 10)
+                    self.game.enemy_group.add(a)
+                    del a
+                else:
+                    a = CB_Fly(self)
+                    a.rect.bottomleft = (
+                    random.randint(self.game.enemy_placement_range[0], self.game.enemy_placement_range[1]),
+                    random.randint(self.game.fly_y_range[0], self.game.fly_y_range[1]))
+                    a.set_speed(v_x=-1 * random.randint(self.game.fly_speed_range[0], self.game.fly_speed_range[1]))
+                    self.game.enemy_group.add(a)
+                    del a
+            else:
+                a = CB_Snail(self)
+                a.rect.bottomleft = (
+                random.randint(self.game.enemy_placement_range[0], self.game.enemy_placement_range[1]), 300)
+                a.set_speed(v_x=-1 * random.randint(self.game.snail_speed_range[0], self.game.snail_speed_range[1]))
+
+                self.game.enemy_group.add(a)
+                del a
+            pygame.time.set_timer(self.game.enemy_spawn_timer, self.game.enemy_spawn_interval, 1)
+            return
+
+        elif not self.game.enemy_spawn:
+            return
+
+        next_enemy = self.game.enemy_spawn[0]  # list(type, spawn time, spawn location, args)
+        if next_enemy[1] < time_spent:
+            match next_enemy[0]:
+                case 'fly':
+                    a = CB_Fly(self)
+                    a.rect.bottomleft = (800, next_enemy[2])
+                case 'bat':
+                    a = CB_Bat(self)
+                    a.rect.bottomleft = (800, next_enemy[2])
+                case 'snail':
+                    a = CB_Snail(self)
+                    a.rect.bottomleft = (800, 300)
+            a.set_speed(v_x=next_enemy[3], v_y=next_enemy[4])
+            self.game.enemy_group.add(a)
+            self.game.enemy_spawn.pop(0)
+            if not self.game.enemy_spawn:
+                pygame.time.set_timer(self.game.enemy_spawn_timer, self.game.enemy_spawn_interval, 1)
+            del a
+
+    def difficulty_scaling(self):
+        if int(self.score) != self.last_rescale_score:
+            self.game.player_sprite.max_jumps = 1 + int(self.score)//(30 + 5*self.game.mask_sprite.stomps)
+
+            self.game.max_ammo = MAX_AMMO_CAPACITY - int(self.score)//6
+
+            self.game.enemy_spawn_interval = ENEMY_SPAWN_INTERVAL_MS - 7 * int(self.score)
+
+            self.game.enemy_placement_range = [ENEMY_PLACEMENT_RANGE[0], ENEMY_PLACEMENT_RANGE[1] - int(self.score)]
+            self.game.fly_y_range = [FLY_Y_RANGE[0] - int(self.score)//2, FLY_Y_RANGE[1] + int(self.score)]
+            self.game.snail_speed_range = [SNAIL_SPEED_RANGE[0] + 50 + int(self.score), SNAIL_SPEED_RANGE[1] + 2*int(self.score)]
+            self.game.fly_speed_range = [FLY_SPEED_RANGE[0] + 50 + int(self.score), FLY_SPEED_RANGE[1] + 2*int(self.score)]
+
+            self.last_rescale_score = int(self.score)

@@ -1,5 +1,7 @@
+from typing import Final
+
 # start, end, japanese, english
-SUBTITLES = [(29000, 32690, 'いつまでも　私は廻り続ける', 'Ever on and on I continue circling'),
+SUBTITLES: Final = [(29000, 32690, 'いつまでも　私は廻り続ける', 'Ever on and on I continue circling'),
              (32700, 35990, '憎悪だけがくるりと苦悩を織り交ぜて', 'With nothing but my hate in a carousel of agony'),
              (36000, 39590, 'ゆっくりと忘れ　心が消えはじめるまで', "Till slowly I forget and my heart starts vanishing"),
              (39600, 42990, 'ふと思い知る　自由になんてなれないのだと', "And suddenly I see that I can't break free"),
