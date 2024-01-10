@@ -5,6 +5,7 @@
 #  .
 #  add more patterns for enemies (wednesday): frogs (snail) are slower but jump/lunge, on contact reverse controls for some time)
 #  - add white-black bad apple after pacifist
+#  - add new pacifist speech, new run music after third speech
 #  - endless run after bad apple run
 #  - add sralker after bad apple run
 #  .
@@ -310,7 +311,7 @@ class HMGame(object):
         self.menu_music      = pygame.mixer.Sound('R_Game/audio/menu music/menu.mp3')
         self.post_nuke_music = pygame.mixer.Sound('R_Game/audio/menu music/post_nuke_menu.mp3')
 
-        self.pacifist_speech     = pygame.mixer.Sound('R_Game/audio/misc sounds/pacifist_speech.mp3')
+        self.pacifist_speech     = pygame.mixer.Sound('R_Game/audio/misc sounds/pacifist_speech_1.mp3')
         self.pacifist_speech_2   = pygame.mixer.Sound('R_Game/audio/misc sounds/pacifist_speech_2.mp3')
         self.pacifist_menu_music = pygame.mixer.Sound('R_Game/audio/menu music/pacifist_menu.mp3')
 
@@ -529,8 +530,10 @@ class HMGame(object):
                 # players controls
 
                 if event.type == pygame.KEYDOWN:
+                    # print(f"Pressed: {self.cb_mode.time_pass}")
                     self.player_sprite.player_input(event.key, False)
                 if event.type == pygame.KEYUP:
+                    # print('###')#f"Released: {self.cb_mode.time_pass}")
                     self.player_sprite.player_input(event.key, True)
 
                 if event.type == pygame.MOUSEBUTTONDOWN:
@@ -675,7 +678,9 @@ class HMGame(object):
                 for i in self.enemy_group:
                     i.mask_bool = False
                 self.kill_run_init_sound.play()
-                if self.progress.get('color_blind_unlocked', False):
+                if self.progress.get('both speeches', False):
+                    self.pacifist_speech_3.play()
+                elif self.progress.get('color_blind_unlocked', False):  # TODO: add distinction for third ending
                     self.pacifist_speech_2.play()
                 else:
                     self.pacifist_speech.play()
@@ -948,10 +953,15 @@ class HMGame(object):
             _alpha = pygame.math.clamp((time_pass_ms - 71000)*255 // 1500, 0, 255)
             self.sky_color_foreground.set_alpha(_alpha)
             self.screen.blit(self.sky_color_foreground, (0, 0))
-
+        # TODO: second ending is now third
+        # TODO: add pacifist counter for 3 endings
         if (time_pass_ms > 78200 and self.progress.get('color_blind_unlocked', False)) or (time_pass_ms > 10700 and not self.progress.get('color_blind_unlocked', False)):
+        # TODO:
             self.game_state = self.GameState.NO_KILL_MENU
-            self.progress['color_blind_unlocked'] = True
+            if self.progress.get('color_blind_unlocked', False):
+                self.progress['both speeches'] = True
+            else:
+                self.progress['color_blind_unlocked'] = True
             self.music_handler.music_play(self.pacifist_menu_music)
 
     def pacifist_menu(self):

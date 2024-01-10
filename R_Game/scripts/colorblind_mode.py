@@ -5,7 +5,7 @@ from datetime import datetime
 from json import dumps
 
 # TODO:
-#  add UI (!!!)
+#  add UI (skill icons and cd)
 #  add snow to post sky rooster until color change
 #  add spinning girl and leaves
 #  add sun
@@ -29,7 +29,7 @@ from R_Game.config.config import (STOMP_SPEED,
                                   SNAIL_SPEED_RANGE,
                                   FLY_SPEED_RANGE,
                                   MAX_AMMO_CAPACITY,
-                                  PICKUP_DROP_RATE)
+                                  )
 
 class CB_Snail(Snail):
     def __init__(self, touhou, center=None, speed=None):
@@ -136,6 +136,31 @@ class CB_BatMask(BatMask):
     def update(self):
         self.image = self.images[self.body.source.color]
         super().update()
+
+class CB_Leaf(pygame.sprite.Sprite):
+    def __init__(self, source, image_index, pos):
+        super().__init__()
+        self.source = source
+
+        self.source.leaves_sprites.add(self)
+
+        self.og_image = source.leaves[image_index]
+        self.image = self.og_image
+        self.rect = self.image.get_rect()
+        self.rect.midbottom = (pos, -30)
+
+        self.angle = 0
+
+    def rotate(self):
+        self.angle += 2  # 180 * self.source.game.delta_time / 1000
+        self.image = pygame.transform.rotozoom(self.og_image, self.angle, 1)
+        self.rect = self.image.get_rect(center=self.rect.center)
+
+    def update(self):
+        self.rotate()
+        self.rect.center = (self.rect.centerx, self.rect.centery + 1)
+        if self.rect.top > 300:
+            self.kill()
 
 
 class CB_Player(Player):
@@ -247,6 +272,8 @@ class CB_Mask(Mask):
         self.stomp_sprite = None
         self.stomps = 0
 
+        self.punch = self.punch_process
+
         if _type == 'rooster':
             self.images = _player.source.rooster_mask
             self.image = self.images[_player.source.color]
@@ -268,7 +295,6 @@ class CB_Mask(Mask):
             self.images = _player.source.tiger_mask
             self.image = self.images[_player.source.color]
             self.punch_status = 'ready'
-            self.punch = self.punch_process
 
             self.stomp_sprite = CB_Stomp(_player)
             _player.game.player_attachments.add(self.stomp_sprite)
@@ -297,7 +323,8 @@ class CB_Mask(Mask):
         return 1300 + self.dash_used - pygame.time.get_ticks() - 700 * bool(self.culmination)
 
     def punch_process(self):
-        if self.punch_used is None:
+        if self.punch_used is None or self.type_ != 'tiger':
+            self.punch_sprite.image = self.punch_sprite.default_image
             return
         _now = pygame.time.get_ticks()
         _time_spent = _now - self.punch_used
@@ -404,6 +431,9 @@ class Touhou:
         self.overlay = pygame.Surface((800, 400))
         self.foreground.set_alpha(45)
 
+        self.no_surf = pygame.surface.Surface((2, 2))
+        self.no_surf.set_alpha(0)
+
         self.score = 0
         self.last_rescale_score = None
 
@@ -414,60 +444,80 @@ class Touhou:
 
     def load_images(self):
         path = 'R_Game/graphics/color_blind_images/'
-        self.ammo_icon      = [pygame.image.load(path + 'ammo_white.png'), pygame.image.load(path + 'ammo_black.png')]
-        self.dash_icon      = [pygame.image.load(path + 'dash_black.png'), pygame.image.load(path + 'dash_white.png')]
-        self.jump_off_icon  = [pygame.image.load(path + 'jump_off_white.png'), pygame.image.load(path + 'jump_off_black.png')]
-        self.jump_on_icon   = [pygame.image.load(path + 'jump_on_white.png'), pygame.image.load(path + 'jump_on_black.png')]
-        self.oob_pointer    = [pygame.image.load(path + 'oob_pointer_black.png'), pygame.image.load(path + 'oob_pointer_white.png')]
-        self.punch_icon     = [pygame.image.load(path + 'punch_white.png'), pygame.image.load(path + 'punch_black.png')]
+        self.ammo_icon      = [pygame.transform.scale(pygame.image.load(path + 'ammo_black.png').convert_alpha(), (30, 30)), pygame.transform.scale(pygame.image.load(path + 'ammo_white.png').convert_alpha(), (30, 30))]
+        self.jump_off_icon  = [pygame.transform.scale(pygame.image.load(path + 'jump_off_black.png').convert_alpha(), (30, 30)), pygame.transform.scale(pygame.image.load(path + 'jump_off_white.png').convert_alpha(), (30, 30))]
+        self.jump_on_icon   = [pygame.transform.scale(pygame.image.load(path + 'jump_on_black.png').convert_alpha(), (30, 30)), pygame.transform.scale(pygame.image.load(path + 'jump_on_white.png').convert_alpha(), (30, 30))]
+        self.oob_pointer    = [pygame.image.load(path + 'oob_pointer_black.png').convert_alpha(), pygame.image.load(path + 'oob_pointer_white.png').convert_alpha()]
 
-        self.bat_mask  = [pygame.transform.scale(pygame.image.load(path + 'Bat_black.png'), (35, 45)),
-                          pygame.transform.scale(pygame.image.load(path + 'Bat_white.png'), (35, 45))]
-        self.owl_mask  = [pygame.transform.scale(pygame.image.load(path + 'owl_black.png'), (35, 45)),
-                          pygame.transform.scale(pygame.image.load(path + 'owl_white.png'), (35, 45))]
-        self.fly_1     = [pygame.image.load(path + 'Fly1_black.png'), pygame.image.load(path + 'Fly1_white.png')]
-        self.fly_2     = [pygame.image.load(path + 'Fly2_black.png'), pygame.image.load(path + 'Fly2_white.png')]
+        self.punch_icon     = [pygame.transform.scale(pygame.image.load(path + 'punch_black.png').convert_alpha(), (50, 50)), pygame.transform.scale(pygame.image.load(path + 'punch_white.png').convert_alpha(), (50, 50))]
+        self.dash_icon = [pygame.transform.scale(pygame.image.load(path + 'dash_black.png').convert_alpha(), (50, 50)),
+                          pygame.transform.scale(pygame.image.load(path + 'dash_white.png').convert_alpha(), (50, 50))]
+        self.shield_icon = [pygame.transform.scale(pygame.image.load(path + 'shield_black.png').convert_alpha(), (50, 50)),
+                          pygame.transform.scale(pygame.image.load(path + 'shield_white.png').convert_alpha(), (50, 50))]
 
-        self.dog_mask = [pygame.transform.scale(pygame.image.load(path + 'dog_black.png'), (35, 45)),
-                         pygame.transform.scale(pygame.image.load(path + 'dog_white.png'), (35, 45))]
-        self.snail_1  = [pygame.image.load(path + 'snail1_black.png'), pygame.image.load(path + 'snail1_white.png')]
-        self.snail_2  = [pygame.image.load(path + 'snail2_black.png'), pygame.image.load(path + 'snail2_white.png')]
-        self.stomped  = [pygame.image.load(path + 'stomped_black.png'), pygame.image.load(path + 'stomped_white.png')]
+        self.bat_mask  = [pygame.transform.scale(pygame.image.load(path + 'Bat_black.png').convert_alpha(), (35, 45)),
+                          pygame.transform.scale(pygame.image.load(path + 'Bat_white.png').convert_alpha(), (35, 45))]
+        self.owl_mask  = [pygame.transform.scale(pygame.image.load(path + 'owl_black.png').convert_alpha(), (35, 45)),
+                          pygame.transform.scale(pygame.image.load(path + 'owl_white.png').convert_alpha(), (35, 45))]
+        self.fly_1     = [pygame.image.load(path + 'Fly1_black.png').convert_alpha(),
+                          pygame.image.load(path + 'Fly1_white.png').convert_alpha()]
+        self.fly_2     = [pygame.image.load(path + 'Fly2_black.png').convert_alpha(),
+                          pygame.image.load(path + 'Fly2_white.png').convert_alpha()]
 
-        self.bear_mask    = [pygame.transform.scale(pygame.image.load(path + 'bear_black.png'), (90, 80)),
-                             pygame.transform.scale(pygame.image.load(path + 'bear_white.png'), (90, 80))]
-        self.rooster_mask = [pygame.transform.scale(pygame.image.load(path + 'rooster_black.png'), (90, 95)),
-                             pygame.transform.scale(pygame.image.load(path + 'rooster_white.png'), (90, 95))]
-        self.tiger_mask   = [pygame.transform.scale(pygame.image.load(path + 'tiger_black.png'), (96, 80)),
-                             pygame.transform.scale(pygame.image.load(path + 'tiger_white.png'), (96, 80))]
-        self.zebra_mask   = [pygame.transform.scale(pygame.image.load(path + 'zebra_black.png'), (96, 90)),
-                             pygame.transform.scale(pygame.image.load(path + 'zebra_white.png'), (96, 90))]
-        self.gun_image    = [pygame.transform.scale(pygame.image.load(path + 'GUN_black.png'), (120, 60)),
-                             pygame.transform.scale(pygame.image.load(path + 'GUN_white.png'), (120, 60))]
+        self.dog_mask = [pygame.transform.scale(pygame.image.load(path + 'dog_black.png').convert_alpha(), (35, 45)),
+                         pygame.transform.scale(pygame.image.load(path + 'dog_white.png').convert_alpha(), (35, 45))]
+        self.snail_1  = [pygame.image.load(path + 'snail1_black.png').convert_alpha(),
+                         pygame.image.load(path + 'snail1_white.png').convert_alpha()]
+        self.snail_2  = [pygame.image.load(path + 'snail2_black.png').convert_alpha(),
+                         pygame.image.load(path + 'snail2_white.png').convert_alpha()]
+        self.stomped  = [pygame.image.load(path + 'stomped_black.png').convert_alpha(),
+                         pygame.image.load(path + 'stomped_white.png').convert_alpha()]
 
-        self.player_jump   = [pygame.image.load(path + 'jump_black.png'), pygame.image.load(path + 'jump_white.png')]
-        self.player_walk_1 = [pygame.image.load(path + 'player_walk_1_black.png'), pygame.image.load(path + 'player_walk_1_white.png')]
-        self.player_walk_2 = [pygame.image.load(path + 'player_walk_2_black.png'), pygame.image.load(path + 'player_walk_2_white.png')]
+        self.bear_mask    = [pygame.transform.scale(pygame.image.load(path + 'bear_black.png').convert_alpha(), (90, 80)),
+                             pygame.transform.scale(pygame.image.load(path + 'bear_white.png').convert_alpha(), (90, 80))]
+        self.rooster_mask = [pygame.transform.scale(pygame.image.load(path + 'rooster_black.png').convert_alpha(), (90, 95)),
+                             pygame.transform.scale(pygame.image.load(path + 'rooster_white.png').convert_alpha(), (90, 95))]
+        self.tiger_mask   = [pygame.transform.scale(pygame.image.load(path + 'tiger_black.png').convert_alpha(), (96, 80)),
+                             pygame.transform.scale(pygame.image.load(path + 'tiger_white.png').convert_alpha(), (96, 80))]
+        self.zebra_mask   = [pygame.transform.scale(pygame.image.load(path + 'zebra_black.png').convert_alpha(), (96, 90)),
+                             pygame.transform.scale(pygame.image.load(path + 'zebra_white.png').convert_alpha(), (96, 90))]
+        self.gun_image    = [pygame.transform.scale(pygame.image.load(path + 'GUN_black.png').convert_alpha(), (120, 60)),
+                             pygame.transform.scale(pygame.image.load(path + 'GUN_white.png').convert_alpha(), (120, 60))]
 
-        self.punch_1 = [pygame.image.load(path + 'punch_1_black.png'), pygame.image.load(path + 'punch_1_white.png')]
-        self.punch_2 = [pygame.image.load(path + 'punch_1-5_black.png'), pygame.image.load(path + 'punch_1-5_white.png')]
-        self.punch_3 = [pygame.image.load(path + 'punch_2_black.png'), pygame.image.load(path + 'punch_2_white.png')]
-        self.punch_4 = [pygame.image.load(path + 'punch_2-5_black.png'), pygame.image.load(path + 'punch_2-5_white.png')]
-        self.punch_5 = [pygame.image.load(path + 'punch_3_black.png'), pygame.image.load(path + 'punch_3_white.png')]
+        self.player_jump   = [pygame.image.load(path + 'jump_black.png').convert_alpha(),
+                              pygame.image.load(path + 'jump_white.png').convert_alpha()]
+        self.player_walk_1 = [pygame.image.load(path + 'player_walk_1_black.png').convert_alpha(),
+                              pygame.image.load(path + 'player_walk_1_white.png').convert_alpha()]
+        self.player_walk_2 = [pygame.image.load(path + 'player_walk_2_black.png').convert_alpha(),
+                              pygame.image.load(path + 'player_walk_2_white.png').convert_alpha()]
+        self.player_stand = [pygame.image.load(path + 'player_stand_black.png').convert_alpha(),
+                            pygame.image.load(path + 'player_stand_white.png').convert_alpha()]
 
-        # self.punch_1[0].set_alpha(100)
-        # self.punch_2[0].set_alpha(100)
-        # self.punch_3[0].set_alpha(100)
-        # self.punch_4[0].set_alpha(100)
-        # self.punch_5[0].set_alpha(100)
-        #
-        # self.punch_1[1].set_alpha(100)
-        # self.punch_2[1].set_alpha(100)
-        # self.punch_3[1].set_alpha(100)
-        # self.punch_4[1].set_alpha(100)
-        # self.punch_5[1].set_alpha(100)
+        self.punch_1 = [pygame.image.load(path + 'punch_1_black.png').convert_alpha(),
+                        pygame.image.load(path + 'punch_1_white.png').convert_alpha()]
+        self.punch_2 = [pygame.image.load(path + 'punch_1-5_black.png').convert_alpha(),
+                        pygame.image.load(path + 'punch_1-5_white.png').convert_alpha()]
+        self.punch_3 = [pygame.image.load(path + 'punch_2_black.png').convert_alpha(),
+                        pygame.image.load(path + 'punch_2_white.png').convert_alpha()]
+        self.punch_4 = [pygame.image.load(path + 'punch_2-5_black.png').convert_alpha(),
+                        pygame.image.load(path + 'punch_2-5_white.png').convert_alpha()]
+        self.punch_5 = [pygame.image.load(path + 'punch_3_black.png').convert_alpha(),
+                        pygame.image.load(path + 'punch_3_white.png').convert_alpha()]
 
-        self.stomp_image = [pygame.image.load(path + 'stomp_black.png'), pygame.image.load(path + 'stomp_white.png')]
+        self.stomp_image = [pygame.image.load(path + 'stomp_black.png').convert_alpha(),
+                            pygame.image.load(path + 'stomp_white.png').convert_alpha()]
+
+        self.leaves = []
+        for index in range(1, 9):
+            image = pygame.transform.scale(
+                pygame.image.load(f"{path}leaves/{index}.png").convert_alpha(), (80, 80)
+            )
+            self.leaves.append(image)
+
+        self.girl = []
+        for index in range(1, 31):
+            image = pygame.image.load(f"{path}girl/{index}.png").convert_alpha()
+            self.girl.append(image)
 
     def set_up_run(self):
         self.subtitles = list(i for i in SUBTITLES)
@@ -498,6 +548,9 @@ class Touhou:
         self.game.enemy_group = pygame.sprite.LayeredUpdates()
         self.game.enemy_attachments = pygame.sprite.LayeredUpdates()
 
+        self.leaves_sprites = pygame.sprite.Group()
+        self.spin_girl = None
+
         self.color = 1  # 0 - black character, 1 - white character
 
         self.start = pygame.time.get_ticks()
@@ -508,6 +561,8 @@ class Touhou:
         self.last_rescale_score = None
 
         self.player_mask = None
+
+        self.ability_icon = self.no_surf
 
         self.sky_is_over = False
         self.maskless_enemies = True
@@ -537,13 +592,13 @@ class Touhou:
 
         # self.game.music_handler.music_play(self.music)
         pygame.mixer_music.load('R_Game/audio/misc music/color_blind.mp3')
-        pygame.mixer_music.play(start=0.0)#84.0)
+        pygame.mixer_music.play(start=0.0)#83.0)
         self.game.screen.blit(self.ground_surf, (0, 300))
 
     def runtime_frame(self):
         now = pygame.time.get_ticks()
 
-        time_pass = now - self.start# + 84000
+        time_pass = now - self.start #+ 83000
 
         if time_pass < 4000:
             y = (time_pass)//10
@@ -580,27 +635,34 @@ class Touhou:
             if not self.game.enemy_spawn:
                 self.game.mask_sprite.culmination = True
                 # list(type, spawn time, spawn location, spawn speed, args)
-                self.game.enemy_spawn = [['fly', 111400, 140, -750, 0], ['fly', 111800, 140, -720, 0],
-                                         ['snail', 112000, 300, -650, 0], ['bat', 113000, 130, -650, 20],
-                                         ['snail', 113500, 300, -650, 0], ['bat', 114000, 130, -650, 20],
-                                         ['snail', 114500, 300, -650, 0], ['bat', 115000, 130, -650, 20],
-                                         ['snail', 115500, 300, -650, 0], ['snail', 115680, 300, -650, 20],
-                                         ['snail', 115830, 150, -650, 20], ['bat', 116000, 130, -650, 20],
-                                         ['snail', 116500, 150, -650, 20], ['bat', 117000, 130, -650, 20],
-                                         ['snail', 117500, 150, -650, 20], ['bat', 118000, 130, -650, 20],
-                                         ['snail', 118500, 300, -650, 0], ['snail', 118680, 300, -650, 20],
+                # TODO: fix difficulty & timings, make speed a variable for easier tinkering
+                self.game.enemy_spawn = [['fly', 111900, 140, -750, 0], ['fly', 112300, 140, -720, 0],
+                                         ['snail', 112900, 300, -680, 0], ['bat', 113400, 130, -680, 20],
+                                         ['snail', 113800, 300, -680, 0], ['bat', 114300, 130, -680, 20],
+                                         ['snail', 114600, 300, -680, 0], ['bat', 115100, 130, -680, 20],
+                                         ['snail', 115600, 300, -680, 0],# ['fly', 116100, 50, -680, 20],
+                                         ['snail', 116100, 300, -680, 0], ['snail', 116400, 300, -680, 20],
+                                         ['snail', 117300, 150, -680, 20], ['bat', 117800, 130, -680, 20],
+                                         ['snail', 118100, 150, -680, 20], ['bat', 118600, 130, -680, 20],
+                                         ['snail', 119000, 150, -680, 20],# ['fly', 119500, 50, -680, 20],
+                                         ['snail', 119500, 300, -680, 0], ['snail', 119900, 300, -680, 20],
 
-                                         ['snail', 119500, 300, -650, 0], ['bat', 120000, 130, -650, 20],
-                                         ['snail', 120500, 300, -650, 0], ['bat', 121000, 130, -650, 20],
-                                         ['snail', 121500, 300, -650, 0], ['bat', 122000, 130, -650, 20],
-                                         ['snail', 122500, 300, -650, 0], ['snail', 122680, 300, -650, 20],
-                                         ['snail', 122830, 150, -650, 20], ['bat', 123000, 130, -650, 20],
-                                         ['snail', 123500, 150, -650, 20], ['bat', 124000, 130, -650, 20],
-                                         ['snail', 124500, 150, -650, 20], ['bat', 125000, 130, -650, 20],
-                                         ['fly', 125400, 100, -760, 0], ['fly', 125500, 140, -755, 0],
-                                         ['fly', 125600, 70, -750, 0], ['fly', 125700, 120, -745, 0],
-                                         ['fly', 125800, 80, -740, 0], ['fly', 125900, 60, -735, 0],
-                                         ['snail', 126500, 150, -420, 20]
+                                         ['snail', 120700, 300, -680, 0], ['bat', 121200, 130, -680, 20],
+                                         ['snail', 121600, 300, -680, 0], ['bat', 122100, 130, -680, 20],
+                                         ['snail', 122500, 300, -680, 0], #['fly', 123000, 50, -680, 20],
+                                         ['snail', 122300, 300, -680, 0], ['snail', 122680, 300, -680, 20],
+                                         ['snail', 123400, 150, -680, 20], ['bat', 123900, 130, -680, 20],
+                                         ['snail', 124200, 150, -680, 20], ['bat', 124700, 130, -680, 20],
+                                         #['snail', 125100, 150, -680, 20], #['bat', 125600, 130, -680, 20],
+                                         ['fly', 125600, 100, -760, 0], ['fly', 125700, 140, -755, 0],
+                                         ['fly', 125800, 70, -750, 0], ['fly', 125900, 120, -745, 0],
+                                         ['fly', 126000, 80, -740, 0], ['fly', 126050, 60, -735, 0],
+                                         ['snail', 126100, 150, -420, 20],
+
+                                         ['leaf', 126700, 670, 0, 7], ['leaf', 126900, 270, 0, 5],
+                                         ['leaf', 126600, 134, 0, 0], ['leaf', 127500, 534, 0, 1],
+                                         ['leaf', 127800, 400, 0, 2], ['leaf', 128200, 600, 0, 3],
+                                         ['leaf', 128500, 730, 0, 4], ['leaf', 128800, 470, 0, 6],
                                          ]
 
         elif time_pass > 110990 and time_pass < 111390:
@@ -608,14 +670,13 @@ class Touhou:
             self.sky_is_over = True
             self.score = 110
 
-
-
-
-        elif time_pass > 130990 and time_pass < 133000: # TODO: do this on collision
-            self.change_mask('tiger')
+        elif time_pass > 125990 and time_pass < 129000:
+            self.change_color(0)
+            self.change_mask('tiger')  # TODO: do this on collision with spin girl
             self.score = 115
 
-        elif time_pass > 166990 and time_pass < 170000:
+        elif time_pass > 166790 and time_pass < 170000:
+            self.change_color(1)
             self.change_mask('bear')
             self.score = 137
 
@@ -653,6 +714,9 @@ class Touhou:
         self.game.enemy_group.draw(self.game.screen)
         self.game.enemy_attachments.draw(self.game.screen)
 
+        self.leaves_sprites.update()
+        self.leaves_sprites.draw(self.game.screen)
+
         self.game.pickups.draw(self.game.screen)
 
         self.draw_overlay(time_pass=time_pass, transition_time=110990)
@@ -667,17 +731,14 @@ class Touhou:
 
         self.draw_shot_after_image()
 
-        # TODo: draw skill cd
         self.draw_spec_abilities()
-
-    # TODO:
-    # game.draw_out_of_bounds_marker()
-    # game.draw_ammo_count()
-    # game.draw_jumps_count()
+        self.draw_out_of_bounds_marker()
+        self.draw_ammo_count()
+        self.draw_jumps_count()
 
 
 
-        if time_pass <= 110200 or time_pass >= 113000: # or (time_pass > 97990 and time_pass < 98490):
+        if (time_pass <= 110200 and not (time_pass > 84990 and time_pass < 86490)) or time_pass >= 113000:
             if self.game.mask_sprite.dash_status != 'active' \
                     and not (self.game.mask_sprite.dash_status == 'cooldown' and self.game.player_sprite.is_airborne()) \
                     and self.game.enemy_collision():
@@ -692,10 +753,12 @@ class Touhou:
 
         self.game.game_over()
 
-
+    # TODO: dont be lazy, add alpha channel and a-channel restoration on mask set-up
+    # TODO: better UI placement
     def draw_spec_abilities(self):
         if self.game.mask_sprite.bear_activation_time is not None:
             _alpha = int(255 * math.sin(1 + (600 - self.game.mask_sprite.bear_activation_time)/300))
+            self.ability_icon = self.no_surf
             self.game.mask_sprite.bear_banner.set_alpha(_alpha)
             self.game.mask_sprite.bear_activation_time -= self.game.delta_time
             self.game.screen.blit(self.game.mask_sprite.bear_banner, (0, 0))
@@ -703,6 +766,26 @@ class Touhou:
                 self.game.mask_sprite.bear_activation_time = None
         else:
             self.game.mask_sprite.bear_activation_time = None
+
+        self.game.screen.blit(self.ability_icon, (390, 10))
+
+        if self.game.mask_sprite.type_ == 'zebra':
+            _dash_cd_text = ''
+            if self.game.mask_sprite.dash_status != 'ready':
+                _dash_cd_text = str(round(self.game.mask_sprite.dash_cd()/1000, 1))
+            _dash_cd_surf = self.game.text_to_surface_mf(_dash_cd_text, True, ['Black', 'White'][self.color], size=50)
+            _dash_cd_rect = _dash_cd_surf.get_rect(center=(380, 40))
+            self.game.screen.blit(self.dash_icon[self.color], (420, 10))
+            self.game.screen.blit(_dash_cd_surf, _dash_cd_rect)
+
+        if self.game.mask_sprite.type_ == 'tiger' and self.game.player_sprite.weapon is None:
+            _punch_cd_text = ''
+            if self.game.mask_sprite.punch_status != 'ready':
+                _punch_cd_text = str(round(self.game.mask_sprite.punch_cd()/1000, 1))
+            _punch_cd_surf = self.game.text_to_surface_mf(_punch_cd_text, True, ['Black', 'White'][self.color], size=50)
+            _punch_cd_rect = _punch_cd_surf.get_rect(center=(380, 40))
+            self.game.screen.blit(self.punch_icon[self.color], (420, 10))
+            self.game.screen.blit(_punch_cd_surf, _punch_cd_rect)
 
     def draw_overlay(self, time_pass=None, transition_time=None):
         if time_pass > 110200 and time_pass < 113000:
@@ -751,6 +834,40 @@ class Touhou:
             else:
                 self.game.gunshot_afterimage.pop(index)
 
+    def draw_out_of_bounds_marker(self):
+        if self.game.player_sprite.rect.bottom < -10:
+            oob_marker_surf = pygame.transform.scale(self.oob_pointer[self.color], (40, 20))
+            oob_marker_rect = oob_marker_surf.get_rect(midtop=(self.game.player_sprite.rect.centerx, 5))
+
+            oob_text_surf = self.game.text_to_surface_mf(f'{-(self.game.player_sprite.rect.bottom - 10)//48}m',
+                                                    True, ['Black', 'White'][self.color], size=32)
+            oob_text_rect = oob_text_surf.get_rect(midtop=[oob_marker_rect.centerx, oob_marker_rect.bottom + 3])
+
+            self.game.screen.blit(oob_marker_surf, oob_marker_rect)
+            self.game.screen.blit(oob_text_surf, oob_text_rect)
+
+    def draw_ammo_count(self):
+        if self.game.player_sprite.weapon:
+            color = ['Black', 'White'][self.color]
+            ammo = self.game.player_sprite.weapon.ammo
+            if ammo < 10:
+                ammo = f' {ammo}'
+            else:
+                ammo = str(ammo)
+            ammo_count_surf = self.game.text_to_surface_mf(ammo, True, color, size=40)
+            self.game.screen.blit(ammo_count_surf, (745, 10))
+            self.game.screen.blit(self.ammo_icon[self.color], (770, 10))
+
+    def draw_jumps_count(self):
+        if self.game.player_sprite.max_jumps < 2:
+            return None
+        for i in range(self.game.player_sprite.max_jumps):
+            if i < self.game.player_sprite.jumps:
+                _image = self.jump_on_icon[self.color]
+            else:
+                _image = self.jump_off_icon[self.color]
+            self.game.screen.blit(_image, (20 + i*40, 10))
+
     def change_color(self, new_color, include_overlay=False):
         if self.color == new_color:
             return
@@ -774,6 +891,11 @@ class Touhou:
         self.game.player_sprite.weapon = None
         if new_mask in ['rooster', 'bear']:
             self.game.player_sprite.pick_up_weapon(CB_Weapon(self))
+        # TODO: add alpha channel restoration
+        if new_mask == 'bear':
+            self.ability_icon = self.shield_icon[1]
+        else:
+            self.ability_icon = self.no_surf
 
     def spawn_new_enemy(self, time_spent=None):
         if not self.game.enemy_spawn and time_spent is None:
@@ -811,18 +933,25 @@ class Touhou:
 
         next_enemy = self.game.enemy_spawn[0]  # list(type, spawn time, spawn location, args)
         if next_enemy[1] < time_spent:
+            a = 0
             match next_enemy[0]:
                 case 'fly':
                     a = CB_Fly(self)
                     a.rect.bottomleft = (800, next_enemy[2])
+                    a.set_speed(v_x=next_enemy[3], v_y=next_enemy[4])
+                    self.game.enemy_group.add(a)
                 case 'bat':
                     a = CB_Bat(self)
                     a.rect.bottomleft = (800, next_enemy[2])
+                    a.set_speed(v_x=next_enemy[3], v_y=next_enemy[4])
+                    self.game.enemy_group.add(a)
                 case 'snail':
                     a = CB_Snail(self)
                     a.rect.bottomleft = (800, 300)
-            a.set_speed(v_x=next_enemy[3], v_y=next_enemy[4])
-            self.game.enemy_group.add(a)
+                    a.set_speed(v_x=next_enemy[3], v_y=next_enemy[4])
+                    self.game.enemy_group.add(a)
+                case 'leaf':
+                    a = CB_Leaf(self, next_enemy[4], next_enemy[2])
             self.game.enemy_spawn.pop(0)
             if not self.game.enemy_spawn:
                 pygame.time.set_timer(self.game.enemy_spawn_timer, self.game.enemy_spawn_interval, 1)
