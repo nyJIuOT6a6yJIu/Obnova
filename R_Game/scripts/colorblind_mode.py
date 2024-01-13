@@ -5,9 +5,11 @@ from datetime import datetime
 from json import dumps
 
 # TODO:
+#  check for transient inconsistencies (as well as in the main game)
+#  remove background noize from girl images
 #  add UI (skill icons and cd)
 #  add snow to post sky rooster until color change
-#  add spinning girl and leaves
+#  fix punch sprite (!!!!!)
 #  add sun
 #  add player enlargement (menu sprite)
 #  add ending sequence
@@ -265,26 +267,22 @@ class CB_Player(Player):
 class CB_Mask(Mask):
     def __init__(self, _player, _type):
         super().__init__(_player, _type, False)
-        self.punch_sprite = Punch(_player)
-
-        _player.game.player_attachments.add(self.punch_sprite)
 
         self.stomp_sprite = None
         self.stomps = 0
 
-        self.punch = self.punch_process
+        self.bear_banner = pygame.Surface((800, 300))
+        self.bear_banner.fill('White')
 
         if _type == 'rooster':
             self.images = _player.source.rooster_mask
             self.image = self.images[_player.source.color]
         elif _type == 'bear':
-            self.deflect = True
+            _player.source.deflects += 1
             self.images = _player.source.bear_mask
             self.images[0].set_alpha(255)
             self.images[1].set_alpha(255)
             self.image = self.images[_player.source.color]
-            self.bear_banner = pygame.Surface((800, 300))
-            self.bear_banner.fill('White')
 
         elif _type == 'zebra':
             self.images = _player.source.zebra_mask
@@ -295,6 +293,10 @@ class CB_Mask(Mask):
             self.images = _player.source.tiger_mask
             self.image = self.images[_player.source.color]
             self.punch_status = 'ready'
+
+            self.punch_sprite = CB_Punch(_player)
+
+            _player.game.player_attachments.add(self.punch_sprite)
 
             self.stomp_sprite = CB_Stomp(_player)
             _player.game.player_attachments.add(self.stomp_sprite)
@@ -323,7 +325,9 @@ class CB_Mask(Mask):
         return 1300 + self.dash_used - pygame.time.get_ticks() - 700 * bool(self.culmination)
 
     def punch_process(self):
-        if self.punch_used is None or self.type_ != 'tiger':
+        if self.type_ != 'tiger':
+            return
+        if self.punch_used is None: # or self.type_ != 'tiger':
             self.punch_sprite.image = self.punch_sprite.default_image
             return
         _now = pygame.time.get_ticks()
@@ -365,7 +369,22 @@ class CB_Mask(Mask):
             case 'frog':
                 self.rect.center = (self.body.rect.midtop[0], self.body.rect.midtop[1] + 23)
         self.dash()
-        self.punch()
+        self.punch_process()
+
+
+
+class CB_Punch(pygame.sprite.Sprite):
+    def __init__(self, body):
+        super().__init__()
+
+        self.default_image = pygame.surface.Surface((74, 84))
+        self.default_image.set_alpha(0)
+        self.image = self.default_image
+        self.rect = self.image.get_rect()
+        self.body = body
+
+    def update(self):
+        self.rect.midleft = self.body.rect.midright
 
 
 class CB_Stomp(Stomp):
@@ -414,6 +433,26 @@ class CB_Weapon(Weapon):
     def update(self):
         self.image = self.og_images[self.source.color]
         super().update()
+
+
+class CB_SpinGirl(pygame.sprite.Sprite):
+    def __init__(self, source):
+        super().__init__()
+        self.source = source
+        self.image = pygame.surface.Surface((30, 300))
+        self.rect = self.image.get_rect()
+        self.girl_frame = source.girl[0]
+        self.rect.center = (-100, 150)
+        self.x = -100
+
+    def update(self):
+        self.x += 475 * self.source.game.delta_time / 1000
+        self.rect.centerx = int(self.x)
+        girl_index = min(max(self.rect.centerx // 27, 0), 29)
+        girl_frame = self.source.girl[girl_index]
+        girl_pos = (self.x - 120, 0)
+        self.source.game.screen.blit(girl_frame, girl_pos)
+
 
 
 class Touhou:
@@ -549,7 +588,7 @@ class Touhou:
         self.game.enemy_attachments = pygame.sprite.LayeredUpdates()
 
         self.leaves_sprites = pygame.sprite.Group()
-        self.spin_girl = None
+        self.girl_sprite = None
 
         self.color = 1  # 0 - black character, 1 - white character
 
@@ -562,7 +601,7 @@ class Touhou:
 
         self.player_mask = None
 
-        self.ability_icon = self.no_surf
+        self.deflects = 0
 
         self.sky_is_over = False
         self.maskless_enemies = True
@@ -592,13 +631,17 @@ class Touhou:
 
         # self.game.music_handler.music_play(self.music)
         pygame.mixer_music.load('R_Game/audio/misc music/color_blind.mp3')
-        pygame.mixer_music.play(start=0.0)#83.0)
+        pygame.mixer_music.play(start=0.0)  # 104.8)
+
+
         self.game.screen.blit(self.ground_surf, (0, 300))
+
+
 
     def runtime_frame(self):
         now = pygame.time.get_ticks()
 
-        time_pass = now - self.start #+ 83000
+        time_pass = now - self.start  # + 104800
 
         if time_pass < 4000:
             y = (time_pass)//10
@@ -636,33 +679,34 @@ class Touhou:
                 self.game.mask_sprite.culmination = True
                 # list(type, spawn time, spawn location, spawn speed, args)
                 # TODO: fix difficulty & timings, make speed a variable for easier tinkering
+                speed = -700
                 self.game.enemy_spawn = [['fly', 111900, 140, -750, 0], ['fly', 112300, 140, -720, 0],
-                                         ['snail', 112900, 300, -680, 0], ['bat', 113400, 130, -680, 20],
-                                         ['snail', 113800, 300, -680, 0], ['bat', 114300, 130, -680, 20],
-                                         ['snail', 114600, 300, -680, 0], ['bat', 115100, 130, -680, 20],
-                                         ['snail', 115600, 300, -680, 0],# ['fly', 116100, 50, -680, 20],
-                                         ['snail', 116100, 300, -680, 0], ['snail', 116400, 300, -680, 20],
-                                         ['snail', 117300, 150, -680, 20], ['bat', 117800, 130, -680, 20],
-                                         ['snail', 118100, 150, -680, 20], ['bat', 118600, 130, -680, 20],
-                                         ['snail', 119000, 150, -680, 20],# ['fly', 119500, 50, -680, 20],
-                                         ['snail', 119500, 300, -680, 0], ['snail', 119900, 300, -680, 20],
+                                         ['snail', 112900, 300, speed, 0], ['bat', 113400, 130, speed, 20],
+                                         ['snail', 113800, 300, speed, 0], ['bat', 114300, 130, speed, 20],
+                                         ['snail', 114600, 300, speed, 0], ['bat', 115100, 130, speed, 20],
+                                         ['snail', 115600, 300, speed, 0], ['snail', 116100, 300, speed, 0],
+                                         ['snail', 116400, 300, speed, 20], ['bat', 116850, 130, speed, 20],
+                                         ['snail', 117300, 150, speed, 20], ['bat', 117800, 130, speed, 20],
+                                         ['snail', 118100, 150, speed, 20], ['bat', 118600, 130, speed, 20],
+                                         ['snail', 119000, 150, speed, 20], ['snail', 119500, 300, speed, 0],
+                                         ['snail', 119900, 300, speed, 20], ['bat', 120300, 130, speed, 20],
 
-                                         ['snail', 120700, 300, -680, 0], ['bat', 121200, 130, -680, 20],
-                                         ['snail', 121600, 300, -680, 0], ['bat', 122100, 130, -680, 20],
-                                         ['snail', 122500, 300, -680, 0], #['fly', 123000, 50, -680, 20],
-                                         ['snail', 122300, 300, -680, 0], ['snail', 122680, 300, -680, 20],
-                                         ['snail', 123400, 150, -680, 20], ['bat', 123900, 130, -680, 20],
-                                         ['snail', 124200, 150, -680, 20], ['bat', 124700, 130, -680, 20],
-                                         #['snail', 125100, 150, -680, 20], #['bat', 125600, 130, -680, 20],
+                                         ['snail', 120700, 300, speed, 0], ['bat', 121200, 130, speed, 20],
+                                         ['snail', 121600, 300, speed, 0], ['bat', 122100, 130, speed, 20],
+                                         ['snail', 122500, 300, speed, 0], ['snail', 122900, 300, speed, 0],
+                                         ['snail', 122680, 300, speed, 20],['bat', 123050, 130, speed, 20],
+                                         ['snail', 123400, 150, speed, 20], ['bat', 123900, 130, speed, 20],
+                                         ['snail', 124200, 150, speed, 20], ['bat', 124700, 130, speed, 20],
+                                         ['snail', 125100, 150, speed, 20], #['bat', 125600, 130, speed, 20],
                                          ['fly', 125600, 100, -760, 0], ['fly', 125700, 140, -755, 0],
                                          ['fly', 125800, 70, -750, 0], ['fly', 125900, 120, -745, 0],
                                          ['fly', 126000, 80, -740, 0], ['fly', 126050, 60, -735, 0],
                                          ['snail', 126100, 150, -420, 20],
 
-                                         ['leaf', 126700, 670, 0, 7], ['leaf', 126900, 270, 0, 5],
-                                         ['leaf', 126600, 134, 0, 0], ['leaf', 127500, 534, 0, 1],
-                                         ['leaf', 127800, 400, 0, 2], ['leaf', 128200, 600, 0, 3],
-                                         ['leaf', 128500, 730, 0, 4], ['leaf', 128800, 470, 0, 6],
+                                         ['leaf', 126250, 670, 0, 7], ['leaf', 126550, 270, 0, 5],
+                                         ['leaf', 126750, 134, 0, 0], ['leaf', 127450, 534, 0, 1],
+                                         ['leaf', 128150, 400, 0, 2], ['leaf', 128850, 600, 0, 3],
+                                         ['leaf', 129550, 730, 0, 4], ['leaf', 129900, 470, 0, 6],
                                          ]
 
         elif time_pass > 110990 and time_pass < 111390:
@@ -672,10 +716,10 @@ class Touhou:
 
         elif time_pass > 125990 and time_pass < 129000:
             self.change_color(0)
-            self.change_mask('tiger')  # TODO: do this on collision with spin girl
+            # self.change_mask('tiger')  # TODO: do this on collision with spin girl
             self.score = 115
 
-        elif time_pass > 166790 and time_pass < 170000:
+        elif time_pass > 167390 and time_pass < 170000:
             self.change_color(1)
             self.change_mask('bear')
             self.score = 137
@@ -708,6 +752,8 @@ class Touhou:
 
             self.game.pickups.update()
 
+        self.girl_handler(time_pass)
+
         self.game.player.draw(self.game.screen)
         self.game.player_attachments.draw(self.game.screen)
 
@@ -723,7 +769,7 @@ class Touhou:
 
         self.draw_subtitles(time_pass)
 
-        self.game.weapon_collision()
+        self.weapon_collision()
 
         self.spawn_new_enemy(time_pass)
 
@@ -742,8 +788,8 @@ class Touhou:
             if self.game.mask_sprite.dash_status != 'active' \
                     and not (self.game.mask_sprite.dash_status == 'cooldown' and self.game.player_sprite.is_airborne()) \
                     and self.game.enemy_collision():
-                if self.game.mask_sprite.deflect:
-                    self.game.mask_sprite.deflect = False
+                if self.deflects:
+                    self.deflects -= 1
                     self.game.mask_sprite.deflect_ability()
                 else:
                     self.game.game_state = self.game.GameState.DEFAULT_MENU
@@ -753,12 +799,31 @@ class Touhou:
 
         self.game.game_over()
 
+    def girl_handler(self, time_pass):  # what a name lmao
+        if self.girl_sprite is None and time_pass >= 130000:
+            self.girl_sprite = CB_SpinGirl(self)
+        elif self.girl_sprite is None or self.girl_sprite == 4:
+            return
+        else:
+            self.girl_sprite.update()
+            enemy_colision = pygame.sprite.spritecollide(self.girl_sprite, self.game.enemy_group, False)
+            for i in enemy_colision:
+                i.mask.kill()
+                i.kill()
+            pygame.sprite.spritecollide(self.girl_sprite, self.leaves_sprites, True)
+            player_collision = pygame.sprite.spritecollide(self.girl_sprite, self.game.player, False)
+            if player_collision:
+                self.change_mask('tiger')
+
+            if self.girl_sprite.rect.x > 1100:
+                self.girl_sprite.kill()
+                self.girl_sprite = 4  # because why not lmao
+
     # TODO: dont be lazy, add alpha channel and a-channel restoration on mask set-up
     # TODO: better UI placement
     def draw_spec_abilities(self):
         if self.game.mask_sprite.bear_activation_time is not None:
             _alpha = int(255 * math.sin(1 + (600 - self.game.mask_sprite.bear_activation_time)/300))
-            self.ability_icon = self.no_surf
             self.game.mask_sprite.bear_banner.set_alpha(_alpha)
             self.game.mask_sprite.bear_activation_time -= self.game.delta_time
             self.game.screen.blit(self.game.mask_sprite.bear_banner, (0, 0))
@@ -767,7 +832,8 @@ class Touhou:
         else:
             self.game.mask_sprite.bear_activation_time = None
 
-        self.game.screen.blit(self.ability_icon, (390, 10))
+        for i in range(self.deflects):
+            self.game.screen.blit(self.shield_icon[self.color], (490 + 55*i, 10))
 
         if self.game.mask_sprite.type_ == 'zebra':
             _dash_cd_text = ''
@@ -827,7 +893,7 @@ class Touhou:
 
     def draw_shot_after_image(self):
         for index, i in enumerate(self.game.gunshot_afterimage):
-            if i[1] > 0.0:
+            if self.game.player_sprite.weapon and i[1] > 0.0:
                 pygame.draw.line(self.game.screen, ['Black', 'White'][self.color], (self.game.player_sprite.weapon.rect.midright[0]-8, self.game.player_sprite.weapon.rect.midright[1]-4), i[0],
                              width=int(6 * math.sin(i[1]*math.pi/100.0)))
                 i[1] -= 1 + (2 * self.game.delta_time) // 3
@@ -892,10 +958,38 @@ class Touhou:
         if new_mask in ['rooster', 'bear']:
             self.game.player_sprite.pick_up_weapon(CB_Weapon(self))
         # TODO: add alpha channel restoration
-        if new_mask == 'bear':
-            self.ability_icon = self.shield_icon[1]
-        else:
-            self.ability_icon = self.no_surf
+
+
+    def weapon_collision(self):
+        for weapon in self.game.player_attachments:
+            if isinstance(weapon, CB_Punch) and self.game.mask_sprite.punch_status == 'active':
+                collisions = pygame.sprite.spritecollide(weapon, self.game.enemy_group, False)
+                for i in collisions:
+                    i.mask.kill()
+                    i.kill()
+
+            if isinstance(weapon, CB_Stomp) and self.game.mask_sprite.type_ == 'tiger' and self.game.player_sprite.speed[1] > STOMP_SPEED:
+                collisions = pygame.sprite.spritecollide(weapon, self.game.enemy_group, False)
+                for i in collisions:
+                    self.game.mask_sprite.punch_status = 'cooldown'
+                    self.game.mask_sprite.punch_used = pygame.time.get_ticks() - 165 - int(2.5 * self.score)
+                    i.mask.kill()
+                    i.kill()
+
+                    self.game.mask_sprite.stomps += 1
+
+            if not isinstance(weapon, CB_Weapon):
+                continue
+            if weapon.speed == [0, 0]:
+                continue
+            collisions = pygame.sprite.spritecollide(weapon, self.game.enemy_group, False)
+            for i in collisions:
+                i.mask.kill()
+                i.kill()
+
+            if collisions:
+                weapon.kill()
+
 
     def spawn_new_enemy(self, time_spent=None):
         if not self.game.enemy_spawn and time_spent is None:
@@ -944,6 +1038,7 @@ class Touhou:
                     a = CB_Bat(self)
                     a.rect.bottomleft = (800, next_enemy[2])
                     a.set_speed(v_x=next_enemy[3], v_y=next_enemy[4])
+                    a.set_difficulty(2)
                     self.game.enemy_group.add(a)
                 case 'snail':
                     a = CB_Snail(self)

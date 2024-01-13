@@ -1007,7 +1007,7 @@ class HMGame(object):
 
             save(self.progress)
 
-            # print(self.player_sprite.rect.top - self.player_sprite.rect.bottom)
+            # 0(self.player_sprite.rect.top - self.player_sprite.rect.bottom)
 
     def add_new_enemy(self, snail_relative_chance: int, fly_relative_chance: int):
         if random.randint(1, snail_relative_chance + fly_relative_chance) <= fly_relative_chance:
@@ -1052,7 +1052,7 @@ class HMGame(object):
         for weapon in self.player_attachments:
             if isinstance(weapon, Punch) and self.mask_sprite.punch_status == 'active':
                 collisions = pygame.sprite.spritecollide(weapon, self.enemy_group, False)
-                if collisions and self.game_state != self.GameState.COLOR_BLIND:
+                if collisions:
                     self.punch_sound.play()
                 for i in collisions:
                     self.score_add(f'{i.get_type()}_kill')
@@ -1085,8 +1085,7 @@ class HMGame(object):
 
             if collisions and self.mask_sprite.type_ not in ['tiger', 'frog']:
                 weapon.kill()
-                if self.game_state != self.GameState.COLOR_BLIND:
-                    self.punch_sound.play()
+                self.punch_sound.play()
 
     def aim_at_enemy(self):
         if bool(self.enemy_group.get_sprites_at(pygame.mouse.get_pos())):
@@ -1105,7 +1104,7 @@ class HMGame(object):
 
     def draw_shot_after_image(self):
         for index, i in enumerate(self.gunshot_afterimage):
-            if i[1] > 0.0:
+            if self.player_sprite.weapon and i[1] > 0.0:
                 pygame.draw.line(self.screen, (255, 255, 100), (self.player_sprite.weapon.rect.midright[0]-8, self.player_sprite.weapon.rect.midright[1]-4), i[0],
                              width= int(6 * math.sin(i[1]*math.pi/100.0)))
                 i[1] -= self.delta_time
