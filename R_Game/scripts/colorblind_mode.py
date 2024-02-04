@@ -6,13 +6,9 @@ from json import dumps
 
 # TODO:
 #  check for transient inconsistencies (as well as in the main game)
-#  remove background noize from girl images
-#  add UI (skill icons and cd)
-#  add snow to post sky rooster until color change
-#  fix punch sprite (!!!!!)
-#  add sun
-#  add player enlargement (menu sprite)
-#  add ending sequence
+#  check transition to rooster 2, looks like something with overlay again
+#  add semitransparent rotating yin yang
+#  add shield (up to 2) for every 3 touhou deaths
 
 import pygame
 
@@ -116,7 +112,7 @@ class CB_Bat(Bat):
         self.speed = speed or [0, 0]
 
         self.mask_bool = not touhou.maskless_enemies
-        self.mask = CB_OwlMask(self)
+        self.mask = CB_BatMask(self)
         self.game.enemy_attachments.add(self.mask)
 
     def _animate(self):
@@ -177,6 +173,10 @@ class CB_Player(Player):
         self.image = self.anim_frames[self.anim_index][touhou.color]
         self.rect = self.image.get_rect(midbottom=(80, 300))
         self.center = center or [0.0, 0.0]
+
+        self.punch_group = pygame.sprite.GroupSingle()
+        self.punch_sprite = CB_Punch(self)
+        self.punch_group.add(self.punch_sprite)
 
     def player_input(self, key_pressed, released=False, event_pos=None):
         if key_pressed == 1:
@@ -263,6 +263,37 @@ class CB_Player(Player):
             self.anim_index = 0
             self.image = self.anim_frames[self.anim_index][self.source.color]
 
+    def update(self):
+        super().update()
+        self.punch_group.update()
+        self.punch_group.draw(self.game.screen)
+
+    def final_update(self, time_pass):
+        gravity_acc = self.game.gravity_acceleration
+
+        if abs(self.rect.centerx - self.center[0]) > 2:
+            self.center[0] = self.rect.centerx
+        if abs(self.rect.centery - self.center[1]) > 2:
+            self.center[1] = self.rect.centery
+
+        self.speed[1] += gravity_acc * self.game.delta_time / 2000
+        self.center[1] += self.speed[1] * self.game.delta_time / 1000
+
+        self.rect.center = [int(self.center[0]), int(self.center[1])]
+
+        if not self.is_airborne():
+            self.rect.bottom = 300
+            self.speed[1] = 0
+            self.jumps = self.max_jumps
+        if time_pass > 216800:
+            d_t = time_pass - 216800
+            scale = (int(68 + 5*d_t), int(84 + 5*d_t))
+            self.image = pygame.transform.scale(self.source.player_stand[self.source.color], scale)
+            self.rect = self.image.get_rect(center=self.center)
+
+
+
+
 
 class CB_Mask(Mask):
     def __init__(self, _player, _type):
@@ -273,6 +304,9 @@ class CB_Mask(Mask):
 
         self.bear_banner = pygame.Surface((800, 300))
         self.bear_banner.fill('White')
+
+        self.punch_status = None
+        self.punch_used = None
 
         if _type == 'rooster':
             self.images = _player.source.rooster_mask
@@ -293,10 +327,6 @@ class CB_Mask(Mask):
             self.images = _player.source.tiger_mask
             self.image = self.images[_player.source.color]
             self.punch_status = 'ready'
-
-            self.punch_sprite = CB_Punch(_player)
-
-            _player.game.player_attachments.add(self.punch_sprite)
 
             self.stomp_sprite = CB_Stomp(_player)
             _player.game.player_attachments.add(self.stomp_sprite)
@@ -324,34 +354,6 @@ class CB_Mask(Mask):
     def dash_cd(self):
         return 1300 + self.dash_used - pygame.time.get_ticks() - 700 * bool(self.culmination)
 
-    def punch_process(self):
-        if self.type_ != 'tiger':
-            return
-        if self.punch_used is None: # or self.type_ != 'tiger':
-            self.punch_sprite.image = self.punch_sprite.default_image
-            return
-        _now = pygame.time.get_ticks()
-        _time_spent = _now - self.punch_used
-        _final = 160 + int(2.5 * self.body.source.score)
-        _time_by_punch = _time_spent % 160
-
-        if self.punch_status != 'cooldown' and _time_by_punch < 40:
-            self.punch_sprite.image = self.body.source.punch_1[self.body.source.color]
-        elif self.punch_status != 'cooldown' and _time_by_punch < 60:
-            self.punch_sprite.image = self.body.source.punch_2[self.body.source.color]
-        elif self.punch_status != 'cooldown' and _time_by_punch < 100:
-            self.punch_sprite.image = self.body.source.punch_3[self.body.source.color]
-        elif self.punch_status != 'cooldown' and _time_by_punch < 120:
-            self.punch_sprite.image = self.body.source.punch_4[self.body.source.color]
-        elif self.punch_status != 'cooldown' and _time_by_punch < 160:
-            self.punch_sprite.image = self.body.source.punch_5[self.body.source.color]
-        if _time_spent > _final:
-            self.punch_status = 'cooldown'
-            self.punch_sprite.image = self.punch_sprite.default_image
-        if self.punch_cd() <= 0:
-            self.punch_status = 'ready'
-            self.punch_used = None
-
     def punch_cd(self):
         return 950 - self.body.source.score + self.punch_used - pygame.time.get_ticks()
 
@@ -369,8 +371,6 @@ class CB_Mask(Mask):
             case 'frog':
                 self.rect.center = (self.body.rect.midtop[0], self.body.rect.midtop[1] + 23)
         self.dash()
-        self.punch_process()
-
 
 
 class CB_Punch(pygame.sprite.Sprite):
@@ -383,7 +383,35 @@ class CB_Punch(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.body = body
 
+    def punch_process(self):
+        if self.body.mask.type_ != 'tiger' or self.body.mask.punch_used is None:
+            self.image = self.default_image
+            return
+
+        _now = pygame.time.get_ticks()
+        _time_spent = _now - self.body.mask.punch_used
+        _final = 160 + int(2.5 * self.body.source.score)
+        _time_by_punch = _time_spent % 160
+
+        if self.body.mask.punch_status != 'cooldown' and _time_by_punch < 40:
+            self.image = self.body.source.punch_1[self.body.source.color]
+        elif self.body.mask.punch_status != 'cooldown' and _time_by_punch < 60:
+            self.image = self.body.source.punch_2[self.body.source.color]
+        elif self.body.mask.punch_status != 'cooldown' and _time_by_punch < 100:
+            self.image = self.body.source.punch_3[self.body.source.color]
+        elif self.body.mask.punch_status != 'cooldown' and _time_by_punch < 120:
+            self.image = self.body.source.punch_4[self.body.source.color]
+        elif self.body.mask.punch_status != 'cooldown' and _time_by_punch < 160:
+            self.image = self.body.source.punch_5[self.body.source.color]
+        if _time_spent > _final:
+            self.body.mask.punch_status = 'cooldown'
+            self.image = self.default_image
+        if self.body.mask.punch_cd() <= 0:
+            self.body.mask.punch_status = 'ready'
+            self.body.mask.punch_used = None
+
     def update(self):
+        self.punch_process()
         self.rect.midleft = self.body.rect.midright
 
 
@@ -446,13 +474,12 @@ class CB_SpinGirl(pygame.sprite.Sprite):
         self.x = -100
 
     def update(self):
-        self.x += 475 * self.source.game.delta_time / 1000
+        self.x += 400 * self.source.game.delta_time / 1000
         self.rect.centerx = int(self.x)
         girl_index = min(max(self.rect.centerx // 27, 0), 29)
         girl_frame = self.source.girl[girl_index]
         girl_pos = (self.x - 120, 0)
         self.source.game.screen.blit(girl_frame, girl_pos)
-
 
 
 class Touhou:
@@ -566,6 +593,9 @@ class Touhou:
         self.ground_surf.fill('White')
         self.foreground.fill('Black')
 
+        self.snow_list = []
+        self.sun_flake = [[253, 300], 4]
+
         self.game.max_ammo = MAX_AMMO_CAPACITY
         self.game.pickup_rate = -100
         self.game.pickups = pygame.sprite.LayeredUpdates()
@@ -631,8 +661,9 @@ class Touhou:
 
         # self.game.music_handler.music_play(self.music)
         pygame.mixer_music.load('R_Game/audio/misc music/color_blind.mp3')
-        pygame.mixer_music.play(start=0.0)  # 104.8)
+        pygame.mixer_music.play(start=0.0)
 
+        # self.deflects = 10
 
         self.game.screen.blit(self.ground_surf, (0, 300))
 
@@ -641,7 +672,7 @@ class Touhou:
     def runtime_frame(self):
         now = pygame.time.get_ticks()
 
-        time_pass = now - self.start  # + 104800
+        time_pass = now - self.start# + 210000
 
         if time_pass < 4000:
             y = (time_pass)//10
@@ -650,35 +681,33 @@ class Touhou:
             if not self.sky_is_over and self.game.mask_sprite.dash_status != 'active':
                 self.game.screen.blit(self.sky_surf, (0, 0))
 
-        if time_pass > 14990 and time_pass < 20000:
+        if 14990 <= time_pass < 20000:
             self.change_color(0)
             self.change_mask('rooster')
             self.maskless_enemies = False
             self.score = 29
 
-
-        elif time_pass > 42990 and time_pass < 45000:
+        elif 42990 <= time_pass < 45000:
             self.change_color(1)
             self.change_mask('bear')
             self.score = 69  # nice
 
-        elif time_pass > 69990 and time_pass < 73000:
+        elif 69990 <= time_pass < 73000:
             self.change_mask('tiger')
             self.score = 89
 
-        elif time_pass > 84990 and time_pass < 88000:
+        elif 84990 <= time_pass < 88000:
             self.change_color(0, True)
             self.change_mask('zebra')
 
-        elif time_pass > 97990 and time_pass < 100000:
-            pass
-            # self.change_mask('zebra')
+        # elif time_pass > 97990 and time_pass < 100000:
+        #     pass
+        #     # self.change_mask('zebra')
 
-        elif time_pass > 109690 and time_pass < 111000:
+        elif 109690 <= time_pass < 111000:
             if not self.game.enemy_spawn:
                 self.game.mask_sprite.culmination = True
                 # list(type, spawn time, spawn location, spawn speed, args)
-                # TODO: fix difficulty & timings, make speed a variable for easier tinkering
                 speed = -700
                 self.game.enemy_spawn = [['fly', 111900, 140, -750, 0], ['fly', 112300, 140, -720, 0],
                                          ['snail', 112900, 300, speed, 0], ['bat', 113400, 130, speed, 20],
@@ -705,52 +734,64 @@ class Touhou:
 
                                          ['leaf', 126250, 670, 0, 7], ['leaf', 126550, 270, 0, 5],
                                          ['leaf', 126750, 134, 0, 0], ['leaf', 127450, 534, 0, 1],
-                                         ['leaf', 128150, 400, 0, 2], ['leaf', 128850, 600, 0, 3],
+                                         ['leaf', 128150, 400, 0, 2], ['leaf', 128850, 290, 0, 3],
                                          ['leaf', 129550, 730, 0, 4], ['leaf', 129900, 470, 0, 6],
                                          ]
 
-        elif time_pass > 110990 and time_pass < 111390:
+        elif 110990 <= time_pass < 111390:
             self.change_color(1)
             self.sky_is_over = True
             self.score = 110
 
-        elif time_pass > 125990 and time_pass < 129000:
+        elif 125990 <= time_pass < 129000:
             self.change_color(0)
-            # self.change_mask('tiger')  # TODO: do this on collision with spin girl
             self.score = 115
 
-        elif time_pass > 167390 and time_pass < 170000:
-            self.change_color(1)
+        elif 166900 <= time_pass < 170000:
+            self.change_color(1, True)
             self.change_mask('bear')
             self.score = 137
 
-        elif time_pass > 180990 and time_pass < 185000:
-            self.change_color(0)
+        elif 180500 <= time_pass < 194990:
+            self.change_color(0, True)
             self.sky_is_over = False
             self.change_mask('rooster')
             self.score = 90
+            self.draw_snow(time_pass)
 
-        elif time_pass > 194990 and time_pass < 198000:
+        elif 194990 <= time_pass < 209990:
             self.change_color(1)
             self.score = 95
+            self.draw_snow(time_pass, False)
 
-        elif time_pass > 209990 and time_pass < 212000:
+        elif 209990 <= time_pass < 212000:
             self.change_color(0)
             self.sky_is_over = True
+
             self.change_mask('None')
-            self.score = 137
+            self.score = min(int(137 + 62 * (time_pass - 209990) / 2110), 199)
+
+        elif time_pass >= 217700:
+            self.game.game_state = self.game.GameState.DEFAULT_MENU
+            self.game.progress['sralker_unlocked'] = True
 
         if self.sky_is_over or self.game.mask_sprite.dash_status == 'active':
             self.game.screen.blit(self.foreground, (0, 0))
 
-        if time_pass > 14990 or time_pass < 14490:
-            self.game.player.update()
-            self.game.player_attachments.update()
+        self.draw_sun(time_pass)
 
+        if time_pass > 14890 or time_pass < 14490:
+            # last 1.5 sec block inputs, swap model, enlarge model
+            if time_pass < 216000:
+                self.game.player.update()
+                self.game.player_attachments.update()
+            else:
+                self.game.player_sprite.final_update(time_pass)
             self.game.enemy_group.update()
             self.game.enemy_attachments.update()
 
             self.game.pickups.update()
+
 
         self.girl_handler(time_pass)
 
@@ -765,7 +806,9 @@ class Touhou:
 
         self.game.pickups.draw(self.game.screen)
 
-        self.draw_overlay(time_pass=time_pass, transition_time=110990)
+        self.draw_overlay(time_pass=time_pass, transition_time=110990, half_duration=700)
+        self.draw_overlay(time_pass=time_pass, transition_time=180500, half_duration=500)
+        self.draw_overlay(time_pass=time_pass, transition_time=194990, half_duration=500)
 
         self.draw_subtitles(time_pass)
 
@@ -782,9 +825,9 @@ class Touhou:
         self.draw_ammo_count()
         self.draw_jumps_count()
 
-
-
-        if (time_pass <= 110200 and not (time_pass > 84990 and time_pass < 86490)) or time_pass >= 113000:
+        if not ((84990 < time_pass < 86490)  or  # first from-tiger transition
+               (167000 < time_pass < 168500) or  # second from-tiger transition
+                         time_pass >= 209000):   # end sequence
             if self.game.mask_sprite.dash_status != 'active' \
                     and not (self.game.mask_sprite.dash_status == 'cooldown' and self.game.player_sprite.is_airborne()) \
                     and self.game.enemy_collision():
@@ -797,10 +840,11 @@ class Touhou:
                     self.game.enemy_spawn = list()
                     pygame.mixer_music.stop()
 
-        self.game.game_over()
+        if time_pass <= 217500:
+            self.game.game_over()
 
     def girl_handler(self, time_pass):  # what a name lmao
-        if self.girl_sprite is None and time_pass >= 130000:
+        if self.girl_sprite is None and time_pass >= 131200:
             self.girl_sprite = CB_SpinGirl(self)
         elif self.girl_sprite is None or self.girl_sprite == 4:
             return
@@ -853,18 +897,27 @@ class Touhou:
             self.game.screen.blit(self.punch_icon[self.color], (420, 10))
             self.game.screen.blit(_punch_cd_surf, _punch_cd_rect)
 
-    def draw_overlay(self, time_pass=None, transition_time=None):
-        if time_pass > 110200 and time_pass < 113000:
-            _alpha = int(pygame.math.clamp((255 - (255/700)*abs(transition_time - time_pass)), 0, 255))
+    def draw_overlay(self, time_pass=None, transition_time=None, half_duration=700):
+        if time_pass > transition_time - half_duration and time_pass < transition_time + half_duration:
+            _alpha = int(pygame.math.clamp((255 - (255/half_duration)*abs(transition_time - time_pass)), 0, 255))
             self.overlay.set_alpha(_alpha)
             if _alpha:
                 self.game.screen.blit(self.overlay, (0, 0))
 
+
+
     def draw_subtitles(self, time_pass):
         if self.subtitles is None or self.subtitles == []:
             return
+
+        # if 167380 <= time_pass < 167400:
+        #     self.sub_drawn = False
+        #
+        # elif 180980 <= time_pass < 181000:
+        #     self.sub_drawn = False
+
         current_subtitle = self.subtitles[0]
-        if time_pass > current_subtitle[0] and not self.sub_drawn: # pora
+        if time_pass > current_subtitle[0] and not self.sub_drawn:  # pora
             self.sub_drawn = True
             jap_text_surf = self.game.text_to_surface_jf(current_subtitle[2], True, ['White', 'Black'][self.color], size=26)
             eng_text_surf = self.game.text_to_surface_mf(current_subtitle[3], True, ['White', 'Black'][self.color], size=36)
@@ -874,16 +927,15 @@ class Touhou:
                 _alpha = pygame.math.clamp((time_pass - current_subtitle[0]) * 255 // 800, 0, 255)
                 jap_text_surf.set_alpha(_alpha)
                 eng_text_surf.set_alpha(_alpha)
-                self.game.screen.blit(self.ground_surf, (0, 300))
                 self.sub_drawn = False
             if current_subtitle[1] in [110990, 209000] and current_subtitle[1] - time_pass < 1200:
                 _alpha = pygame.math.clamp((current_subtitle[1] - time_pass) * 255 // 1200, 0, 255)
                 jap_text_surf.set_alpha(_alpha)
                 eng_text_surf.set_alpha(_alpha)
-                self.game.screen.blit(self.ground_surf, (0, 300))
                 self.sub_drawn = False
             jap_text_rect = jap_text_surf.get_rect(center=(400, 330))
             eng_text_rect = eng_text_surf.get_rect(center=(400, 370))
+            self.game.screen.blit(self.ground_surf, (0, 300))
             self.game.screen.blit(jap_text_surf, jap_text_rect)
             self.game.screen.blit(eng_text_surf, eng_text_rect)
         if time_pass > current_subtitle[1]:
@@ -924,15 +976,62 @@ class Touhou:
             self.game.screen.blit(ammo_count_surf, (745, 10))
             self.game.screen.blit(self.ammo_icon[self.color], (770, 10))
 
-    def draw_jumps_count(self):
-        if self.game.player_sprite.max_jumps < 2:
-            return None
-        for i in range(self.game.player_sprite.max_jumps):
-            if i < self.game.player_sprite.jumps:
-                _image = self.jump_on_icon[self.color]
+    def draw_snow(self, time_pass, reverse=True):
+        if len(self.snow_list) < min(80, (time_pass - 181000) // 250) and time_pass < 210000: #(len(self.snow_list) < 40 and time_pass >= 184000) or \
+            self.snow_list.append([random.randint(30, 740), 300*bool(reverse)])  # init x, current y
+        delete_snow = []
+        for snow_flake in self.snow_list:
+            if reverse:
+                snow_flake[1] -= self.game.delta_time * 80 / 1000
             else:
-                _image = self.jump_off_icon[self.color]
-            self.game.screen.blit(_image, (20 + i*40, 10))
+                snow_flake[1] += self.game.delta_time * 80 / 1000
+            y = int(snow_flake[1])
+
+            if y <= -10 or y >= 310:
+                delete_snow.append(snow_flake)
+                continue
+
+            # TODO: for sun snow_flake[0] is 253, 1.625 sec to travel
+            x = int(snow_flake[0] + snow_flake[0] * 120 / (441 - y))
+
+            if (y >= 300 and not reverse) or (y <= -10 and reverse):
+                delete_snow.append(snow_flake)
+                continue
+
+            pygame.draw.circle(self.game.screen, ['Black', 'White'][self.color], (x, y), 4)
+
+        for i in delete_snow:
+            self.snow_list.remove(i)
+
+
+    def draw_sun(self, time_pass):
+        if time_pass < 192100:
+            return
+        if time_pass < 193400:
+            self.sun_flake[0][1] = int(300 - (time_pass - 192100) / 10)
+            self.sun_flake[0][0] = int(253 + 253 * 120 / (441 - self.sun_flake[0][1]))
+
+        elif time_pass < 209990:
+            self.sun_flake[1] = 4 + 9 * (time_pass - 193400) / 1000
+
+        else:
+            self.sun_flake[1] = 40 + 4 * (time_pass - 209990) / 1000
+
+        if time_pass >= 209990:
+            self.sun_flake[0][0] = self.sun_flake[0][0] + 1.3 * math.sin((time_pass - 209990) / 30)
+
+        if not 194990 <= time_pass < 209990:
+            pygame.draw.circle(self.game.screen, 'Black', (int(self.sun_flake[0][0]), int(self.sun_flake[0][1])) , int(self.sun_flake[1]))
+
+    def draw_jumps_count(self):
+            if self.game.player_sprite.max_jumps < 2:
+                return None
+            for i in range(self.game.player_sprite.max_jumps):
+                if i < self.game.player_sprite.jumps:
+                    _image = self.jump_on_icon[self.color]
+                else:
+                    _image = self.jump_off_icon[self.color]
+                self.game.screen.blit(_image, (20 + i*40, 10))
 
     def change_color(self, new_color, include_overlay=False):
         if self.color == new_color:
@@ -942,6 +1041,7 @@ class Touhou:
         self.ground_surf.fill(['Black', 'White'][self.color])
         self.sky_surf.fill(['White', 'Black'][self.color])
         self.foreground.fill(['White', 'Black'][self.color])
+        self.game.mask_sprite.bear_banner.fill(['White', 'Black'][self.color])
         if include_overlay:
             self.overlay.fill(['White', 'Black'][self.color])
         self.game.screen.blit(self.ground_surf, (0, 300))
@@ -959,14 +1059,14 @@ class Touhou:
             self.game.player_sprite.pick_up_weapon(CB_Weapon(self))
         # TODO: add alpha channel restoration
 
-
     def weapon_collision(self):
+        if self.game.mask_sprite.type_ == 'tiger' and self.game.mask_sprite.punch_status == 'active':
+            collisions = pygame.sprite.spritecollide(self.game.player_sprite.punch_sprite, self.game.enemy_group, False)
+            for i in collisions:
+                i.mask.kill()
+                i.kill()
+
         for weapon in self.game.player_attachments:
-            if isinstance(weapon, CB_Punch) and self.game.mask_sprite.punch_status == 'active':
-                collisions = pygame.sprite.spritecollide(weapon, self.game.enemy_group, False)
-                for i in collisions:
-                    i.mask.kill()
-                    i.kill()
 
             if isinstance(weapon, CB_Stomp) and self.game.mask_sprite.type_ == 'tiger' and self.game.player_sprite.speed[1] > STOMP_SPEED:
                 collisions = pygame.sprite.spritecollide(weapon, self.game.enemy_group, False)
@@ -1054,7 +1154,10 @@ class Touhou:
 
     def difficulty_scaling(self):
         if int(self.score) != self.last_rescale_score:
-            self.game.player_sprite.max_jumps = 1 + int(self.score)//(30 + 5*self.game.mask_sprite.stomps)
+            if self.score > 138:
+                self.game.player_sprite.max_jumps = 0
+            else:
+                self.game.player_sprite.max_jumps = 1 + int(self.score)//(30 + 5*self.game.mask_sprite.stomps)
 
             self.game.max_ammo = MAX_AMMO_CAPACITY - int(self.score)//6
 

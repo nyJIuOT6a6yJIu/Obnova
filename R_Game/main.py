@@ -8,6 +8,7 @@
 #  - add new pacifist speech, new run music after third speech
 #  - endless run after bad apple run
 #  - add sralker after bad apple run
+#  - make stomp collision wider
 #  .
 #  - (?) introduce speed limit (so that game wont crush)
 
