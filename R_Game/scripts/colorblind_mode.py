@@ -6,16 +6,15 @@ from json import dumps
 
 # TODO:
 #  check for transient inconsistencies (as well as in the main game)
-#  check transition to rooster 2, looks like something with overlay again
-#  add semitransparent rotating yin yang
-#  add shield (up to 2) for every 3 touhou deaths
+#  track deaths, add shield (up to 2) for every 4 touhou deaths
+#  write to disk on save
 
 import pygame
 
 from R_Game.scripts.snail_sprite import Snail, DogMask
 from R_Game.scripts.fly_sprite import Fly, OwlMask, Bat, BatMask
 
-from R_Game.scripts.player_sprite import Player, Punch, Weapon, Stomp, Mask
+from R_Game.scripts.player_sprite import Player, Weapon, Stomp, Mask
 
 from R_Game.config.subtitles import SUBTITLES
 from R_Game.config.config import (STOMP_SPEED,
@@ -518,8 +517,9 @@ class Touhou:
         self.punch_icon     = [pygame.transform.scale(pygame.image.load(path + 'punch_black.png').convert_alpha(), (50, 50)), pygame.transform.scale(pygame.image.load(path + 'punch_white.png').convert_alpha(), (50, 50))]
         self.dash_icon = [pygame.transform.scale(pygame.image.load(path + 'dash_black.png').convert_alpha(), (50, 50)),
                           pygame.transform.scale(pygame.image.load(path + 'dash_white.png').convert_alpha(), (50, 50))]
-        self.shield_icon = [pygame.transform.scale(pygame.image.load(path + 'shield_black.png').convert_alpha(), (50, 50)),
-                          pygame.transform.scale(pygame.image.load(path + 'shield_white.png').convert_alpha(), (50, 50))]
+
+        self.shield_icon = [pygame.transform.scale(pygame.image.load(path + 'fumo_shield_black.png').convert_alpha(), (50, 50)),
+                          pygame.transform.scale(pygame.image.load(path + 'fumo_shield_white.png').convert_alpha(), (50, 50))]
 
         self.bat_mask  = [pygame.transform.scale(pygame.image.load(path + 'Bat_black.png').convert_alpha(), (35, 45)),
                           pygame.transform.scale(pygame.image.load(path + 'Bat_white.png').convert_alpha(), (35, 45))]
@@ -584,6 +584,8 @@ class Touhou:
         for index in range(1, 31):
             image = pygame.image.load(f"{path}girl/{index}.png").convert_alpha()
             self.girl.append(image)
+
+        self.ethe = pygame.image.load(f"{path}ethe.png").convert_alpha()
 
     def set_up_run(self):
         self.subtitles = list(i for i in SUBTITLES)
@@ -663,7 +665,7 @@ class Touhou:
         pygame.mixer_music.load('R_Game/audio/misc music/color_blind.mp3')
         pygame.mixer_music.play(start=0.0)
 
-        # self.deflects = 10
+        self.deflects = 2  # TODO: add 1 for every 4 deaths in progress
 
         self.game.screen.blit(self.ground_surf, (0, 300))
 
@@ -672,7 +674,7 @@ class Touhou:
     def runtime_frame(self):
         now = pygame.time.get_ticks()
 
-        time_pass = now - self.start# + 210000
+        time_pass = now - self.start #+ 180000
 
         if time_pass < 4000:
             y = (time_pass)//10
@@ -792,7 +794,6 @@ class Touhou:
 
             self.game.pickups.update()
 
-
         self.girl_handler(time_pass)
 
         self.game.player.draw(self.game.screen)
@@ -856,7 +857,7 @@ class Touhou:
                 i.kill()
             pygame.sprite.spritecollide(self.girl_sprite, self.leaves_sprites, True)
             player_collision = pygame.sprite.spritecollide(self.girl_sprite, self.game.player, False)
-            if player_collision:
+            if self.game.mask_sprite.type_ != 'tiger' and player_collision:
                 self.change_mask('tiger')
 
             if self.girl_sprite.rect.x > 1100:
@@ -877,7 +878,17 @@ class Touhou:
             self.game.mask_sprite.bear_activation_time = None
 
         for i in range(self.deflects):
-            self.game.screen.blit(self.shield_icon[self.color], (490 + 55*i, 10))
+            self.game.screen.blit(self.shield_icon[self.color], (490 + 56*i, 10))
+
+        if self.deflects == 2:
+            draw_top_right = bool(self.color == 0)
+            draw_top_left = bool(self.color == 0)
+            draw_bottom_left = bool(self.color == 1)
+            draw_bottom_right = bool(self.color == 1)
+            _color = ['Black', 'White'][self.color]
+            pygame.draw.circle(self.game.screen, color=_color, center=(544, 70), radius=8.0, width=2,
+                               draw_top_right=draw_top_right, draw_top_left=draw_top_left,
+                               draw_bottom_left=draw_bottom_left, draw_bottom_right=draw_bottom_right)
 
         if self.game.mask_sprite.type_ == 'zebra':
             _dash_cd_text = ''
@@ -977,7 +988,7 @@ class Touhou:
             self.game.screen.blit(self.ammo_icon[self.color], (770, 10))
 
     def draw_snow(self, time_pass, reverse=True):
-        if len(self.snow_list) < min(80, (time_pass - 181000) // 250) and time_pass < 210000: #(len(self.snow_list) < 40 and time_pass >= 184000) or \
+        if len(self.snow_list) < min(80, (time_pass - 181000) // 250) and time_pass < 210000:
             self.snow_list.append([random.randint(30, 740), 300*bool(reverse)])  # init x, current y
         delete_snow = []
         for snow_flake in self.snow_list:
@@ -991,7 +1002,6 @@ class Touhou:
                 delete_snow.append(snow_flake)
                 continue
 
-            # TODO: for sun snow_flake[0] is 253, 1.625 sec to travel
             x = int(snow_flake[0] + snow_flake[0] * 120 / (441 - y))
 
             if (y >= 300 and not reverse) or (y <= -10 and reverse):
@@ -1003,10 +1013,10 @@ class Touhou:
         for i in delete_snow:
             self.snow_list.remove(i)
 
-
     def draw_sun(self, time_pass):
         if time_pass < 192100:
             return
+        x = 365
         if time_pass < 193400:
             self.sun_flake[0][1] = int(300 - (time_pass - 192100) / 10)
             self.sun_flake[0][0] = int(253 + 253 * 120 / (441 - self.sun_flake[0][1]))
@@ -1018,10 +1028,20 @@ class Touhou:
             self.sun_flake[1] = 40 + 4 * (time_pass - 209990) / 1000
 
         if time_pass >= 209990:
+            x = int(self.sun_flake[0][0])
             self.sun_flake[0][0] = self.sun_flake[0][0] + 1.3 * math.sin((time_pass - 209990) / 30)
 
         if not 194990 <= time_pass < 209990:
             pygame.draw.circle(self.game.screen, 'Black', (int(self.sun_flake[0][0]), int(self.sun_flake[0][1])) , int(self.sun_flake[1]))
+
+            _value = (1 + math.sin(- math.pi / 2 + math.pi*(time_pass - 209990)/7710))
+            _alpha = int(125 * _value)
+            _angle = -500 * _value**2
+            _image = pygame.transform.rotate(self.ethe, _angle)
+            _image.set_alpha(_alpha)
+            _rect = _image.get_rect(center=(x, 170))
+            self.game.screen.blit(_image, _rect)
+
 
     def draw_jumps_count(self):
             if self.game.player_sprite.max_jumps < 2:
@@ -1033,7 +1053,7 @@ class Touhou:
                     _image = self.jump_off_icon[self.color]
                 self.game.screen.blit(_image, (20 + i*40, 10))
 
-    def change_color(self, new_color, include_overlay=False):
+    def change_color(self, new_color, include_overlay=False, time_pass=None):
         if self.color == new_color:
             return
 
@@ -1045,6 +1065,10 @@ class Touhou:
         if include_overlay:
             self.overlay.fill(['White', 'Black'][self.color])
         self.game.screen.blit(self.ground_surf, (0, 300))
+
+        if time_pass is not None:
+            self.sub_drawn = False
+            self.draw_subtitles(time_pass)
 
     def change_mask(self, new_mask):
         if self.game.mask_sprite.type_ == new_mask:

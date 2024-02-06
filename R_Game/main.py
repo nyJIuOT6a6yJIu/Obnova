@@ -4,13 +4,14 @@
 #  - (?) freeze pickup (розібратись з мікшером, щоб ставити музику на паузу)
 #  .
 #  add more patterns for enemies (wednesday): frogs (snail) are slower but jump/lunge, on contact reverse controls for some time)
-#  - add white-black bad apple after pacifist
-#  - add new pacifist speech, new run music after third speech
+#  - add new pacifist speech, new run music (zenyk) and boss music (caramelldansen) after third speech
 #  - endless run after bad apple run
 #  - add sralker after bad apple run
 #  - make stomp collision wider
 #  .
 #  - (?) introduce speed limit (so that game wont crush)
+
+# TODO: write down ALL possible progress keys and draw progress flow
 
 import math
 import random
@@ -219,6 +220,7 @@ class HMGame(object):
         self.score = -1
         self.delta_time = 1
         self.kills = 0
+        self.advanced_enemies = False
 
         self.UI_colorblind = pygame.sprite.Group(CheckBox(self, 'Colorblind mode', (120, 20)))
 
@@ -1279,7 +1281,7 @@ class HMGame(object):
         return _font.render(text, antialias, color, bg)
 
     def score_add(self, mode: str):
-        if self.game_state == self.GameState.COLOR_BLIND:
+        if self.game_state in [self.GameState.COLOR_BLIND, self.GameState.DEFAULT_MENU]:
             return
         if mode.endswith('kill'):
             if self.kills == 0:

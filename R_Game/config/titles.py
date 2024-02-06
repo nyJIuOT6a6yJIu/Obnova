@@ -9,7 +9,7 @@ NUKE_TITLES = [(11300, 16000, 'Ebansoft proudly presents', ''),
                (131000, 135700, 'Petro Potroshenko as', 'Duke Nukem'),
                (139000, 143700, 'Voiced by', 'Gianni Matragrano'),
                (144400, 148700, 'Potroshenko sprite', 'provided by sTasyaN <3'),
-               (150000, 155700, 'Testers', 'Swallow Semen, Lolodimar'),
+               (150000, 155700, 'Testers', "Swallow Semen, Lolodymor, Yigar'"),
                (158000, 162700, 'Pipe fall death sound effect', "Proposed by Yigar'"),
 
                (204300, 211000, 'Try not to kill everyone', 'next time'),

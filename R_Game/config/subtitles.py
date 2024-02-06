@@ -55,11 +55,11 @@ SUBTITLES: Final = [(29000, 32690, 'いつまでも　私は廻り続ける', 'E
              (178000, 180990, 'なにかもが変わり果て真っ黒に染まるでしょう', "Because everything will change, and it all will fade to black"),
 
              (181000, 184990, 'もう少し身体を動かして　あと一歩踏み出して', "If I make another move, if I take another step"),
-             (185000, 187990, '砕け散っていくの　何も私に残らない', "Then it all would fall apart. There'd be nothing of me left"),
-             (188000, 191990, '風に泣けば　夜に泣けば', "If I'm crying in the wind, if I'm crying in the night"),
+             (185000, 188790, '砕け散っていくの　何も私に残らない', "Then it all would fall apart. There'd be nothing of me left"),
+             (188890, 191990, '風に泣けば　夜に泣けば', "If I'm crying in the wind, if I'm crying in the night"),
              (192000, 194990, '道は開くの?私の心もまた白くなる?', "Will there ever be a way? Will my heart return to white?"),
 
-             (195000, 198990, 'あなたは誰? 私はどこにいるの?', "Can you tell me who you are? Can you tell me where I am?"),
+             (195500, 198990, 'あなたは誰? 私はどこにいるの?', "Can you tell me who you are? Can you tell me where I am?"),
              (199000, 201990, 'どう見据えれば　私にできるのかも分からない', "I've forgotten how to see; I've forgotten if I can"),
              (202000, 205990, '目を開けば　もう後に引けはしないのだから', "If I opened up my eyes there'd be no more going back"),
              (206000, 209000, 'すべて投げうつわ　そうすれば黒く染まるはずだから', "Cause I'd throw it all away, and it all would fade to black")
