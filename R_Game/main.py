@@ -4,10 +4,9 @@
 #  - (?) freeze pickup (розібратись з мікшером, щоб ставити музику на паузу)
 #  .
 #  add more patterns for enemies (wednesday): frogs (snail) are slower but jump/lunge, on contact reverse controls for some time)
-#  - add new pacifist speech, new run music (zenyk) and boss music (caramelldansen) after third speech
 #  - endless run after bad apple run
 #  - add sralker after bad apple run
-#  - make stomp collision wider
+#  - (?) make stomp collision wider
 #  .
 #  - (?) introduce speed limit (so that game wont crush)
 
@@ -201,16 +200,20 @@ class HMGame(object):
         self.post_zebra_music.set_volume(0.4)
         self.post_tiger_music.set_volume(0.4)
 
+        self.spain_music.set_volume(1.1)
+
         self.menu_music.set_volume(0.2)
 
         self.enter_the_sandman_music.set_volume(0.8)
         self.enter_the_siemen_music.set_volume(1.1)
+        self.enter_the_sweden_music.set_volume(1.1)
 
         self.nuke_music.set_volume(1.0)
         self.post_nuke_music.set_volume(0.6)
 
         self.pacifist_speech.set_volume(3.0)
         self.pacifist_speech_2.set_volume(3.0)
+        self.pacifist_speech_3.set_volume(1.5)
         self.pacifist_menu_music.set_volume(0.5)
 
         self.cb_mode = Touhou(self)
@@ -224,7 +227,7 @@ class HMGame(object):
 
         self.UI_colorblind = pygame.sprite.Group(CheckBox(self, 'Colorblind mode', (120, 20)))
 
-        if self.progress.get('deaths', 0) == 0 and not self.progress.get("color_blind_unlocked", False):
+        if self.progress.get('deaths', 0) == 0:
             self.set_up_game('first')
         else:
             self.game_state = self.GameState.DEFAULT_MENU
@@ -316,6 +319,7 @@ class HMGame(object):
 
         self.pacifist_speech     = pygame.mixer.Sound('R_Game/audio/misc sounds/pacifist_speech_1.mp3')
         self.pacifist_speech_2   = pygame.mixer.Sound('R_Game/audio/misc sounds/pacifist_speech_2.mp3')
+        self.pacifist_speech_3   = pygame.mixer.Sound('R_Game/audio/misc sounds/pacifist_speech_3.mp3')
         self.pacifist_menu_music = pygame.mixer.Sound('R_Game/audio/menu music/pacifist_menu.mp3')
 
         self.screen.blit(pygame.image.load('R_Game/graphics/banners/loading_3.png'), (0, 0))
@@ -338,8 +342,11 @@ class HMGame(object):
         self.post_zebra_music = pygame.mixer.Sound('R_Game/audio/run music/post_zebra_music.mp3')
         self.post_tiger_music = pygame.mixer.Sound('R_Game/audio/run music/post_tiger_music.mp3')
 
+        self.spain_music = pygame.mixer.Sound('R_Game/audio/run music/spain_music.mp3')
+
         self.enter_the_sandman_music = pygame.mixer.Sound('R_Game/audio/boss music/enter_the_sandman.mp3')
         self.enter_the_siemen_music  = pygame.mixer.Sound('R_Game/audio/boss music/t00rbo_ki11er_BLOODY_run.mp3')
+        self.enter_the_sweden_music  = pygame.mixer.Sound('R_Game/audio/boss music/enter_the_sweden.mp3')
 
         self.nuke_music      = pygame.mixer.Sound('R_Game/audio/misc music/nuke.mp3')
 
@@ -379,6 +386,8 @@ class HMGame(object):
                 music_.extend([self.tiger_music, self.post_tiger_music])
             if self.progress.get('frog_finished', False):
                 music_.append(self.first_run_music)
+            if self.progress.get('all speeches', False):
+                music_.append(self.spain_music)
 
         choice_ = random.choice(music_)
 
@@ -681,9 +690,11 @@ class HMGame(object):
                 for i in self.enemy_group:
                     i.mask_bool = False
                 self.kill_run_init_sound.play()
-                if self.progress.get('both speeches', False):
+                if self.progress.get('all speeches', False):
+                    pass
+                elif self.progress.get('both speeches', False):
                     self.pacifist_speech_3.play()
-                elif self.progress.get('color_blind_unlocked', False):  # TODO: add distinction for third ending
+                elif self.progress.get('color_blind_unlocked', False):
                     self.pacifist_speech_2.play()
                 else:
                     self.pacifist_speech.play()
@@ -952,19 +963,29 @@ class HMGame(object):
 
             self.screen.blit(self.poroh_banner, (0, 0))
 
-        if time_pass_ms > 71000:
+        if time_pass_ms > 71000:  # black-out during second speech
             _alpha = pygame.math.clamp((time_pass_ms - 71000)*255 // 1500, 0, 255)
             self.sky_color_foreground.set_alpha(_alpha)
             self.screen.blit(self.sky_color_foreground, (0, 0))
-        # TODO: second ending is now third
-        # TODO: add pacifist counter for 3 endings
-        if (time_pass_ms > 78200 and self.progress.get('color_blind_unlocked', False)) or (time_pass_ms > 10700 and not self.progress.get('color_blind_unlocked', False)):
-        # TODO:
+
+        # checks ending time
+        # 30700
+        first_speech = not self.progress.get('color_blind_unlocked', False)
+        second_speech = self.progress.get('color_blind_unlocked', False)
+        third_speech = self.progress.get('both speeches', False)
+        all_speeches = self.progress.get('all speeches', False)
+        if (time_pass_ms > 600 and all_speeches) or \
+           (time_pass_ms > 78200 and second_speech) or \
+           (time_pass_ms > 30700 and third_speech) or \
+           (time_pass_ms > 10700 and first_speech):
             self.game_state = self.GameState.NO_KILL_MENU
-            if self.progress.get('color_blind_unlocked', False):
-                self.progress['both speeches'] = True
-            else:
+            if first_speech:
                 self.progress['color_blind_unlocked'] = True
+            if second_speech:
+                self.progress['both speeches'] = True
+            if third_speech:
+                self.progress['all speeches'] = True
+
             self.music_handler.music_play(self.pacifist_menu_music)
 
     def pacifist_menu(self):
@@ -1263,7 +1284,11 @@ class HMGame(object):
                 if self.game_state == self.GameState.TIGER_GAME:
                     self.mask_sprite.image = self.tiger_mask_worn
                 self.kill_run_init_sound.play()
-                boss_music = random.choice([self.enter_the_sandman_music, self.enter_the_siemen_music])
+                boss_music_list = [self.enter_the_sandman_music,
+                                            self.enter_the_siemen_music]
+                if self.progress.get('all speeches', False):
+                    boss_music_list.append(self.enter_the_sweden_music)
+                boss_music = random.choice(boss_music_list)
                 self.music_handler.music_play(boss_music)
             self.advanced_enemies = True
             self.sky_is_over = True  # I don't wanna see you go

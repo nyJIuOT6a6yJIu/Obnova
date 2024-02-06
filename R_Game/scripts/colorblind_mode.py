@@ -1,13 +1,5 @@
 import math
 import random
-from enum import Enum, auto
-from datetime import datetime
-from json import dumps
-
-# TODO:
-#  check for transient inconsistencies (as well as in the main game)
-#  track deaths, add shield (up to 2) for every 4 touhou deaths
-#  write to disk on save
 
 import pygame
 
@@ -27,6 +19,7 @@ from R_Game.config.config import (STOMP_SPEED,
                                   FLY_SPEED_RANGE,
                                   MAX_AMMO_CAPACITY,
                                   )
+
 
 class CB_Snail(Snail):
     def __init__(self, touhou, center=None, speed=None):
@@ -665,10 +658,10 @@ class Touhou:
         pygame.mixer_music.load('R_Game/audio/misc music/color_blind.mp3')
         pygame.mixer_music.play(start=0.0)
 
-        self.deflects = 2  # TODO: add 1 for every 4 deaths in progress
+        cb_deaths = self.game.progress.get('touhou deaths', 0)
+        self.deflects = min(2, cb_deaths//4)
 
         self.game.screen.blit(self.ground_surf, (0, 300))
-
 
 
     def runtime_frame(self):
@@ -839,6 +832,9 @@ class Touhou:
                     self.game.game_state = self.game.GameState.DEFAULT_MENU
                     # self.game.music_handler.music_stop(500)
                     self.game.enemy_spawn = list()
+                    cb_deaths = self.game.progress.get('touhou deaths', 0)
+                    cb_deaths += 1
+                    self.game.progress['touhou deaths'] = cb_deaths
                     pygame.mixer_music.stop()
 
         if time_pass <= 217500:

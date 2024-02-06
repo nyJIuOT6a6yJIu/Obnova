@@ -10,7 +10,6 @@ def load():
     try:
         with open('saves/save') as file:
             raw_save = file.read().encode()
-            # TODO: add ome ifs for good measure
             decrypted = f.decrypt(raw_save).decode()
             progress = loads(decrypted)
     except:  # ловлю всі ерори і мені похуй абсолютно
