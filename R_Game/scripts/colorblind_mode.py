@@ -478,7 +478,7 @@ class Touhou:
     def __init__(self, game):
         self.game = game
         self.load_images()
-        self.music = pygame.mixer.Sound('R_Game/audio/misc music/color_blind.mp3')
+        self.music = ['R_Game/audio/misc music/color_blind.mp3', 1.0]
         self.color = 1  # 0 - black character, 1 - white character
 
         self.start = None
@@ -617,8 +617,6 @@ class Touhou:
 
         self.color = 1  # 0 - black character, 1 - white character
 
-        self.start = pygame.time.get_ticks()
-
         self.foreground.set_alpha(45)
 
         self.score = 0
@@ -654,14 +652,13 @@ class Touhou:
 
         self.game.screen.fill('White')
 
-        # self.game.music_handler.music_play(self.music)
-        pygame.mixer_music.load('R_Game/audio/misc music/color_blind.mp3')
-        pygame.mixer_music.play(start=0.0)
-
         cb_deaths = self.game.progress.get('touhou deaths', 0)
         self.deflects = min(2, cb_deaths//4)
 
         self.game.screen.blit(self.ground_surf, (0, 300))
+
+        self.game.music_handler.music_play(self.music)
+        self.start = pygame.time.get_ticks()
 
 
     def runtime_frame(self):

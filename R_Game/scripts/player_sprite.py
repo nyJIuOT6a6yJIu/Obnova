@@ -202,7 +202,7 @@ class Mask(pygame.sprite.Sprite):
 
 
             if mask == 'rooster':
-                self.image = pygame.transform.scale(_player.game.rooster_mask, (90, 95))
+                self.image = _player.game.rooster_mask
             elif mask == 'bear':
                 self.deflect = True
                 self.image = pygame.transform.scale(_player.game.bear_mask, (90, 80))

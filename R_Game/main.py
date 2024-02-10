@@ -8,6 +8,7 @@
 
 import math
 import random
+import time
 from enum import Enum, auto
 from datetime import datetime
 from json import dumps
@@ -44,32 +45,23 @@ from R_Game.config.titles import NUKE_TITLES
 
 class MusicHandler:
 
-    def __init__(self):
-        self.current_track = None
-        self.IsPaused = False
+    @staticmethod
+    def music_play(new_music):
+        _path, _volume = new_music
 
-    def music_play(self, new_music):
-        # pygame.mixer_music.unload()
-        # pygame.mixer_music.load(new_music)
-        # pygame.mixer_music.play(-1, fade_ms=400)
-        if self.current_track:
-            self.current_track.stop()
-        self.current_track = new_music
-        self.current_track.play(loops=-1, fade_ms=400)
+        pygame.mixer_music.unload()
 
-    def music_stop(self, fadeout=None):
-        if self.current_track:
+        pygame.mixer_music.load(_path)
+        pygame.mixer_music.set_volume(_volume)
+        pygame.mixer_music.play(-1, fade_ms=400)
 
+    @staticmethod
+    def music_stop(fadeout=0):
             if fadeout is None:
-                self.current_track.stop()
-                # pygame.mixer_music.stop()
+                pygame.mixer_music.stop()
             else:
-                # pygame.mixer_music.fadeout(fadeout)
-                self.current_track.fadeout(fadeout)
+                pygame.mixer_music.fadeout(fadeout)
 
-            # pygame.mixer_music.unload()
-
-            self.current_track = None
 
     # def music_toggle(self):
     #     if self.current_track is None:
@@ -162,7 +154,9 @@ class HMGame(object):
         self.screen.blit(_warning_text_, _rect_)
         pygame.display.update()
 
+        a = time.time()
         self.load_sounds()
+        print(time.time() - a)
 
         self.music_handler = MusicHandler()
 
@@ -182,35 +176,9 @@ class HMGame(object):
         self.death_sound_3.set_volume(6)
         self.death_sound_4.set_volume(2.3)
 
-        self.first_run_music.set_volume(0.2)
-
-        self.run_music_1.set_volume(0.3)
-        self.run_music_2.set_volume(0.3)
-        self.run_music_3.set_volume(0.3)
-
-        self.bear_music.set_volume(0.4)
-        self.zebra_music.set_volume(0.4)
-        self.tiger_music.set_volume(0.8)
-
-        self.post_bear_music.set_volume(0.4)
-        self.post_zebra_music.set_volume(0.4)
-        self.post_tiger_music.set_volume(0.4)
-
-        self.spain_music.set_volume(1.1)
-
-        self.menu_music.set_volume(0.2)
-
-        self.enter_the_sandman_music.set_volume(0.8)
-        self.enter_the_siemen_music.set_volume(1.1)
-        self.enter_the_sweden_music.set_volume(1.1)
-
-        self.nuke_music.set_volume(1.0)
-        self.post_nuke_music.set_volume(0.6)
-
         self.pacifist_speech.set_volume(3.0)
         self.pacifist_speech_2.set_volume(3.0)
         self.pacifist_speech_3.set_volume(1.5)
-        self.pacifist_menu_music.set_volume(0.5)
 
         self.cb_mode = Touhou(self)
 
@@ -311,13 +279,13 @@ class HMGame(object):
         self.death_sound_3   = pygame.mixer.Sound('R_Game/audio/death sounds/death3.mp3')
         self.death_sound_4   = pygame.mixer.Sound('R_Game/audio/death sounds/death4.mp3')
 
-        self.menu_music      = pygame.mixer.Sound('R_Game/audio/menu music/menu.mp3')
-        self.post_nuke_music = pygame.mixer.Sound('R_Game/audio/menu music/post_nuke_menu.mp3')
+        self.menu_music      = ['R_Game/audio/menu music/menu.mp3', 0.2]
+        self.post_nuke_music = ['R_Game/audio/menu music/post_nuke_menu.mp3', 0.6]
 
         self.pacifist_speech     = pygame.mixer.Sound('R_Game/audio/misc sounds/pacifist_speech_1.mp3')
         self.pacifist_speech_2   = pygame.mixer.Sound('R_Game/audio/misc sounds/pacifist_speech_2.mp3')
         self.pacifist_speech_3   = pygame.mixer.Sound('R_Game/audio/misc sounds/pacifist_speech_3.mp3')
-        self.pacifist_menu_music = pygame.mixer.Sound('R_Game/audio/menu music/pacifist_menu.mp3')
+        self.pacifist_menu_music = ['R_Game/audio/menu music/pacifist_menu.mp3', 0.5]
 
         self.screen.blit(pygame.image.load('R_Game/graphics/banners/loading_3.png'), (0, 0))
         _warning_text_ = self.text_to_surface_mf('WARNING: Game contains flashing lights', True, (50, 50, 50), size=40)
@@ -325,27 +293,27 @@ class HMGame(object):
         self.screen.blit(_warning_text_, _rect_)
         pygame.display.update()
 
-        self.first_run_music = pygame.mixer.Sound('R_Game/audio/run music/first_run_music.mp3')
+        self.first_run_music = ['R_Game/audio/run music/first_run_music.mp3', 0.2]
 
-        self.run_music_1 = pygame.mixer.Sound('R_Game/audio/run music/run_music1.mp3')
-        self.run_music_2 = pygame.mixer.Sound('R_Game/audio/run music/run_music2.mp3')
-        self.run_music_3 = pygame.mixer.Sound('R_Game/audio/run music/run_music3.mp3')
+        self.run_music_1 = ['R_Game/audio/run music/run_music1.mp3', 0.3]
+        self.run_music_2 = ['R_Game/audio/run music/run_music2.mp3', 0.3]
+        self.run_music_3 = ['R_Game/audio/run music/run_music3.mp3', 0.3]
 
-        self.bear_music  = pygame.mixer.Sound('R_Game/audio/run music/bear_run_music.mp3')
-        self.zebra_music = pygame.mixer.Sound('R_Game/audio/run music/zebra_run_music.mp3')
-        self.tiger_music = pygame.mixer.Sound('R_Game/audio/run music/tiger_run_music.mp3')
+        self.bear_music  = ['R_Game/audio/run music/bear_run_music.mp3', 0.4]
+        self.zebra_music = ['R_Game/audio/run music/zebra_run_music.mp3', 0.4]
+        self.tiger_music = ['R_Game/audio/run music/tiger_run_music.mp3', 0.8]
 
-        self.post_bear_music  = pygame.mixer.Sound('R_Game/audio/run music/post_bear_music.mp3')
-        self.post_zebra_music = pygame.mixer.Sound('R_Game/audio/run music/post_zebra_music.mp3')
-        self.post_tiger_music = pygame.mixer.Sound('R_Game/audio/run music/post_tiger_music.mp3')
+        self.post_bear_music  = ['R_Game/audio/run music/post_bear_music.mp3', 0.4]
+        self.post_zebra_music = ['R_Game/audio/run music/post_zebra_music.mp3', 0.4]
+        self.post_tiger_music = ['R_Game/audio/run music/post_tiger_music.mp3', 0.4]
 
-        self.spain_music = pygame.mixer.Sound('R_Game/audio/run music/spain_music.mp3')
+        self.spain_music = ['R_Game/audio/run music/spain_music.mp3', 1.0]
 
-        self.enter_the_sandman_music = pygame.mixer.Sound('R_Game/audio/boss music/enter_the_sandman.mp3')
-        self.enter_the_siemen_music  = pygame.mixer.Sound('R_Game/audio/boss music/t00rbo_ki11er_BLOODY_run.mp3')
-        self.enter_the_sweden_music  = pygame.mixer.Sound('R_Game/audio/boss music/enter_the_sweden.mp3')
+        self.enter_the_sandman_music = ['R_Game/audio/boss music/enter_the_sandman.mp3', 0.8]
+        self.enter_the_siemen_music  = ['R_Game/audio/boss music/t00rbo_ki11er_BLOODY_run.mp3', 1.0]
+        self.enter_the_sweden_music  = ['R_Game/audio/boss music/enter_the_sweden.mp3', 1.0]
 
-        self.nuke_music      = pygame.mixer.Sound('R_Game/audio/misc music/nuke.mp3')
+        self.nuke_music      = ['R_Game/audio/misc music/nuke.mp3', 1.0]
 
         self.gun_sound           = pygame.mixer.Sound('R_Game/audio/misc sounds/gunshot.mp3')
         self.empty_gun_sound     = pygame.mixer.Sound('R_Game/audio/misc sounds/empty_gun.mp3')
@@ -1371,7 +1339,7 @@ class HMGame(object):
                 if self.advanced_enemies:
                     if self.game_state == self.GameState.TIGER_GAME:
                         self.mask_sprite.image = pygame.transform.scale(self.tiger_mask_normal, (90, 80))
-                    # self.kill_run_init_sound.play()
+                    self.kill_run_init_sound.play()
                     self.choose_music(self.mask_sprite.type_)
 
                 self.advanced_enemies = False
