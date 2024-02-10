@@ -33,8 +33,13 @@ class Player(pygame.sprite.Sprite):
         self.mask = None
         self.weapon = None
 
+        self.toaded_tick = None
+
     def is_airborne(self):
         return bool(self.rect.bottom < 300)
+
+    def get_toaded(self):
+        self.toaded_tick = pygame.time.get_ticks()
 
     def player_input(self, key_pressed, released=False, event_pos=None):
         if self.jumps and (key_pressed == pygame.K_SPACE or key_pressed == pygame.K_w or key_pressed == pygame.K_UP) and not released:
@@ -102,7 +107,7 @@ class Player(pygame.sprite.Sprite):
             self.speed[1] = 0
             self.jumps = self.max_jumps
         elif self.mask.dash_status != 'active':
-            self.speed[1] += gravity_acc * self.game.delta_time / 2000 # 1300 - stomp limit
+            self.speed[1] += gravity_acc * self.game.delta_time / 2000  # 1300 - stomp limit
 
         if self.rect.left < 0:
             self.rect.left = 0
@@ -111,6 +116,8 @@ class Player(pygame.sprite.Sprite):
 
         if self.mask.dash_status == 'active':
             pass
+        elif self.toaded_tick is not None:
+            self.speed[0] = -375 * bool(self.d_pressed) + 375 * bool(self.a_pressed)
         else:
             self.speed[0] = -375*bool(self.a_pressed) + 375*bool(self.d_pressed)
 
@@ -120,6 +127,10 @@ class Player(pygame.sprite.Sprite):
                 self.speed[0] -= minus*self.speed[0]/abs(self.speed[0])
             else:
                 self.speed[0] = 0
+
+        now = pygame.time.get_ticks()
+        if self.toaded_tick and now - self.toaded_tick > 1500:
+            self.toaded_tick = None
 
     def pick_up_weapon(self, weapon, event_pos=None):
         if event_pos is not None and self.weapon:
@@ -265,7 +276,7 @@ class Mask(pygame.sprite.Sprite):
             return
         _now = pygame.time.get_ticks()
         _time_spent = _now - self.punch_used
-        _final = 160 + int(2.5 * self.body.game.score)*bool(self.body.game.kills)
+        _final = 160 + int(2.5 * min(137, self.body.game.score))*bool(self.body.game.kills)
         _time_by_punch = _time_spent % 160
 
         if _time_by_punch < 40:
@@ -286,7 +297,7 @@ class Mask(pygame.sprite.Sprite):
             self.punch_used = None
 
     def punch_cd(self):
-        return 950 - 100*bool(self.body.game.advanced_enemies) - self.body.game.score + self.punch_used - pygame.time.get_ticks()
+        return 950 - 100*bool(self.body.game.advanced_enemies) - min(137, self.body.game.score) + self.punch_used - pygame.time.get_ticks()
 
     def update(self):
         match self.type_:

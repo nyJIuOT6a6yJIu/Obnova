@@ -667,7 +667,7 @@ class Touhou:
     def runtime_frame(self):
         now = pygame.time.get_ticks()
 
-        time_pass = now - self.start #+ 180000
+        time_pass = now - self.start #+ 200000
 
         if time_pass < 4000:
             y = (time_pass)//10

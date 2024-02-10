@@ -1,16 +1,10 @@
 # TODO:
-#  add epilepsy toggle
-#  - (?) add enviromental hazards (enter the sand man)
-#  - (?) freeze pickup (розібратись з мікшером, щоб ставити музику на паузу)
-#  .
-#  add more patterns for enemies (wednesday): frogs (snail) are slower but jump/lunge, on contact reverse controls for some time)
-#  - endless run after bad apple run
+#  - розібратись з мікшером
 #  - add sralker after bad apple run
-#  - (?) make stomp collision wider
-#  .
-#  - (?) introduce speed limit (so that game wont crush)
+#     UI hint
 
-# TODO: write down ALL possible progress keys and draw progress flow
+#  - (?) make stomp collision wider
+#  - (?) introduce speed limit (so that game wont crush)
 
 import math
 import random
@@ -28,11 +22,11 @@ from R_Game.scripts.misc_sprites import SunGroup
 
 from R_Game.scripts.colorblind_mode import Touhou
 
-from R_Game.scripts.MyQT import CheckBox
+from R_Game.scripts.MyQT import CheckBox, CB_CheckBox, EndlessMode_CheckBox, Epilepsy_CheckBox
 
 from R_Game.scripts.player_sprite import Player, Mask, Weapon, Punch, Stomp
 from R_Game.scripts.fly_sprite import Fly, Bat
-from R_Game.scripts.snail_sprite import Snail, Cham, Stomped_Snail
+from R_Game.scripts.snail_sprite import Snail, Cham, Toad, Stomped_Snail
 
 from R_Game.config.config import (STOMP_SPEED,
                                   GRAVITY_ACCELERATION,
@@ -158,6 +152,7 @@ class HMGame(object):
         self.player_menu_rect = self.player_menu.get_rect(center=(179, 200))
         self.frog_menu = pygame.transform.scale(self.frog_mask, (225, 195))
         self.frog_menu_rect = self.frog_menu.get_rect(midtop=[self.player_menu_rect.centerx+3, self.player_menu_rect.top-10])
+        # TODO: remove if nothing else to unlock
         self.wasted_surf = self.text_to_surface_mf('[REDACTED]', True, 'White', 'Black', 48)
         self.wasted_rect = self.wasted_surf.get_rect(center=(179, 181))
 
@@ -178,6 +173,7 @@ class HMGame(object):
         self.swing_sound.set_volume(3.0)
         self.punch_sound.set_volume(4.0)
         self.stomp_sound.set_volume(4.0)
+        self.jump_sound.set_volume(1.0)
 
         self.kill_run_init_sound.set_volume(1.5)
 
@@ -225,19 +221,19 @@ class HMGame(object):
         self.kills = 0
         self.advanced_enemies = False
 
-        self.UI_colorblind = pygame.sprite.Group(CheckBox(self, 'Colorblind mode', (120, 20)))
+        self.UI_colorblind = pygame.sprite.Group(CB_CheckBox(self, ' Colorblind mode', (120, 20)))
+
+        self.UI_epilepsy = pygame.sprite.Group(Epilepsy_CheckBox(self, ' Less fun, more frames', (690, 380)))
+        self.no_epilepsy = self.UI_epilepsy.sprites()[0].state
+
+        self.UI_endless = pygame.sprite.Group(EndlessMode_CheckBox(self, ' Endless mode', (690, 355)))
+        self.endless = self.UI_endless.sprites()[0].state
 
         if self.progress.get('deaths', 0) == 0:
             self.set_up_game('first')
         else:
             self.game_state = self.GameState.DEFAULT_MENU
             self.music_handler.music_play(self.menu_music)
-
-        # # TODO: delete
-        # self.game_state = self.GameState.COLOR_BLIND
-        # self.cb_mode.start = pygame.time.get_ticks()
-        # self.cb_mode.set_up_run()
-        # # TODO
 
         return self.game_loop()
 
@@ -287,6 +283,7 @@ class HMGame(object):
         self.stomp_image   = pygame.image.load('R_Game/graphics/Player/stomp.png').convert_alpha()
         self.stomped_enemy = pygame.image.load('R_Game/graphics/snail/stomped.png').convert_alpha()
 
+        self.sun_glasses = pygame.image.load('R_Game/graphics/Player/sun_glasses.png').convert_alpha()
         self.weapon   = pygame.image.load('R_Game/graphics/Player/GUN.png').convert_alpha()
         self.ammo     = pygame.transform.scale(pygame.image.load('R_Game/graphics/icons/ammo.png').convert_alpha(), (50, 50))
         self.jump_on  = pygame.transform.scale(pygame.image.load('R_Game/graphics/icons/jump_on.png').convert_alpha(), (50, 50))
@@ -358,6 +355,7 @@ class HMGame(object):
         self.swing_sound         = pygame.mixer.Sound('R_Game/audio/misc sounds/swing.mp3')
         self.punch_sound         = pygame.mixer.Sound('R_Game/audio/misc sounds/punch.mp3')
         self.stomp_sound         = pygame.mixer.Sound('R_Game/audio/misc sounds/stomp.mp3')
+        self.jump_sound          = pygame.mixer.Sound('R_Game/audio/misc sounds/jump.mp3')
 
     def choose_music(self, mode):
         music_ = [None]
@@ -397,11 +395,22 @@ class HMGame(object):
             self.music_handler.music_play(self.menu_music)
 
     def set_up_game(self, _mode='rooster'):
+        self.sky_color_surf.fill(self.sky_color.return_color())
         if self.UI_colorblind.sprites()[0].state:
             self.music_handler.music_stop(300)
             self.game_state = self.GameState.COLOR_BLIND
             self.cb_mode.start = pygame.time.get_ticks()
             return self.cb_mode.set_up_run()
+
+        if self.UI_endless.sprites()[0].state:
+            self.endless = True
+        else:
+            self.endless = False
+
+        if self.UI_epilepsy.sprites()[0].state:
+            self.no_epilepsy = True
+        else:
+            self.no_epilepsy = False
 
         if _mode == 'second':
             mode = 'rooster'
@@ -493,6 +502,8 @@ class HMGame(object):
         self.choose_music(mode)
 
         self.progress[f"{mode}_played"] = True
+
+        self.run_start_time = pygame.time.get_ticks()
 
     def game_loop(self):
         while self.game_state != self.GameState.EXIT:
@@ -598,6 +609,12 @@ class HMGame(object):
                 for elem in self.UI_colorblind:
                     if elem.collide(event.pos):
                         elem.on_click()
+                for elem in self.UI_epilepsy:
+                    if elem.collide(event.pos):
+                        elem.on_click()
+                for elem in self.UI_endless:
+                    if elem.collide(event.pos):
+                        elem.on_click()
 
 
             elif self.game_state == self.GameState.NUKE_CREDITS and (event.type == pygame.KEYDOWN and self.progress.get('zebra', False)):
@@ -617,22 +634,31 @@ class HMGame(object):
     def runtime_frame(self, mode='rooster'):
         sky_color = self.sky_color.return_color()
         inc = self.delta_time * 60 / 1000
-        if not self.sky_is_over and self.mask_sprite.dash_status != 'active':
+        if self.no_epilepsy:
+            pass
+        elif not self.sky_is_over and self.mask_sprite.dash_status != 'active':
             self.sky_color_surf.fill(sky_color)
         else:
             self.sky_color_foreground.fill(sky_color)
             inc = inc * 2
-        self.sky_color.increment(inc)
+        if not self.no_epilepsy:
+            self.sky_color.increment(inc)
         self.screen.blit(self.ground_surf, (0, 300))
 
-        if mode == 'first':
+        if self.no_epilepsy:
+            self.screen.blit(self.sky_color_surf, (0, 0))
+            self.screen.blit(self.sky_surf, (0, 0))
+        elif mode == 'first':
             self.screen.blit(self.normal_sky_surf, (0, 0))
-        else: #if mode == 'rooster':
+        else:
             if not self.sky_is_over and self.mask_sprite.dash_status != 'active':
                 self.screen.blit(self.sky_color_surf, (0, 0))
                 self.screen.blit(self.sky_surf, (0, 0))
-
-        score_surf = self.text_to_surface_mf(f'Score: {int(min(self.score, 137))}', True, (44+200*bool(self.kills > 0 or int(self.score) >= 110),
+        if self.endless:
+            score_display = int(self.score)
+        else:
+            score_display = int(min(self.score, 137))
+        score_surf = self.text_to_surface_mf(f'Score: {score_display}', True, (44+200*bool(self.kills > 0 or int(self.score) >= 110),
                                                                                       44+200*bool(not self.kills > 0 and int(self.score) >= 110),
                                                                                       44))
         score_rect = score_surf.get_rect(center=(400, 80))
@@ -665,7 +691,7 @@ class HMGame(object):
         self.difficulty_scaling()
         self.enter_the_sandman()
 
-        if self.score >= 137:
+        if self.score >= 137 and not self.endless:
             string_ = f"{self.mask_sprite.type_}_finished"
             self.progress[string_] = True
 
@@ -715,21 +741,26 @@ class HMGame(object):
                     self.game_state = self.GameState.FIRST_MENU
         self.game_over()
 
-        if self.sky_is_over or self.mask_sprite.dash_status == 'active':
-            self.sky_color_foreground.set_alpha(max(int(self.score)-50, 60))
-            self.ground_surf.set_alpha(max(365 - 3*int(self.score), 50))
+        if not self.no_epilepsy and (self.sky_is_over or self.mask_sprite.dash_status == 'active'):
+            self.sky_color_foreground.set_alpha(max(min(137, int(self.score)) - 50, 60))
+            self.ground_surf.set_alpha(max(365 - 3*min(137, int(self.score)), 50))
             self.screen.blit(self.sky_color_foreground, (0, 0))
 
     def menu_frame(self):
+
         self.screen.fill(self.sky_color.return_color())
 
         self.screen.blit(self.player_menu, self.player_menu_rect)
         if datetime.today().isoweekday() == 3:
             self.screen.blit(self.frog_menu, self.frog_menu_rect)
-        else:
-            self.screen.blit(self.wasted_surf, self.wasted_rect)
-        if int(self.score) >= self.progress.get('highscore', 0):
-            score_line = f"New highscore: {self.progress.get('highscore', int(self.score))}"
+        elif not self.runner_completed():
+            if self.progress.get('all speeches', False):
+                self.screen.blit(self.sun_glasses, (70, 156))
+            else:
+                self.screen.blit(self.wasted_surf, self.wasted_rect)
+        if (int(self.score) >= self.progress.get('highscore', 0) and not self.endless) or \
+                (int(self.score) >= self.progress.get('endless_highscore', 0) and self.endless):
+            score_line = f"New highscore: {int(self.score)}"
         else:
             score_line = f'Your score is {int(self.score)}'
         rooster_game_line = 'Press Y to continue'
@@ -740,7 +771,9 @@ class HMGame(object):
         if int(self.score) <= 0:
             score_line = ''
             rooster_game_line = 'Press Y key to start'
-        elif int(self.score) >= 110 and int(self.score) < 137:
+        elif int(self.score) >= 137:
+            rooster_game_line = 'Press Y key to start'
+        elif 110 <= int(self.score) < 137:
             rooster_game_line = 'Pacan k uspehoo shol (Y)'
         if self.progress.get('bear', False):
             bear_game_line = 'Press B to bear the unbearable'
@@ -770,14 +803,15 @@ class HMGame(object):
         self.screen.blit(tiger_game_surf, tiger_game_rect)
         self.screen.blit(frog_game_surf, frog_game_rect)
 
-        self.screen.blit(bear_game_surf, (50, 350))
+        self.screen.blit(bear_game_surf, (20, 350))
 
         self.screen.blit(self.game_name_surf, (200, 40))
 
         self.draw_menu_ui()
 
-        inc = self.delta_time * 60 / 1000
-        self.sky_color.increment(inc)
+        if not self.no_epilepsy:
+            inc = self.delta_time * 60 / 1000
+            self.sky_color.increment(inc)
 
     def menu_frame_first(self):
         self.screen.fill((125, 130, 230))
@@ -1020,6 +1054,9 @@ class HMGame(object):
             if self.game_state == self.GameState.DEFAULT_MENU:
                 self.music_handler.music_stop(1500)
             self.progress['highscore'] = max(self.progress.get('highscore', 0), int(self.score))
+            if self.endless:
+                self.progress['endless_highscore'] = max(self.progress.get('endless_highscore', 0), int(self.score))
+
             if self.score >= 110:
                 self.progress['achieved 110'] = True
             self.progress['deaths'] = self.progress.get('deaths', 0) + 1
@@ -1032,6 +1069,16 @@ class HMGame(object):
             save(self.progress)
 
             # 0(self.player_sprite.rect.top - self.player_sprite.rect.bottom)
+
+    def runner_completed(self):
+        return self.progress.get('sralker_unlocked', False) and \
+               self.progress.get('rooster_finished', False) and \
+               self.progress.get('bear_finished', False) and \
+               self.progress.get('tiger_finished', False) and \
+               self.progress.get('zebra_finished', False) and \
+               self.progress.get('frog_finished', False) and \
+               self.progress.get('all speeches', False)
+
 
     def add_new_enemy(self, snail_relative_chance: int, fly_relative_chance: int):
         if random.randint(1, snail_relative_chance + fly_relative_chance) <= fly_relative_chance:
@@ -1061,16 +1108,31 @@ class HMGame(object):
                 a.rect.bottomleft = (810, 300)
                 a.set_speed(v_x=-400)
             else: #elif self.game_state in [self.FIRST_GAME, self.DEFAULT_GAME]:
-                a = Snail(self)
-                a.rect.bottomleft = (random.randint(self.enemy_placement_range[0], self.enemy_placement_range[1]), 300)
-                a.set_speed(v_x=-1 * random.randint(self.snail_speed_range[0], self.snail_speed_range[1]))
+                if (self.endless or self.game_state == self.GameState.FROG_GAME) and random.randint(1, 8) == 8:
+                    a = Toad(self)
+                    a.rect.bottomleft = (random.randint(self.enemy_placement_range[0],
+                                                        self.enemy_placement_range[1]), 300)
+                    a.set_speed(v_x=-1 * random.randint(100, 150))
+                else:
+                    a = Snail(self)
+                    a.rect.bottomleft = (random.randint(self.enemy_placement_range[0],
+                                                        self.enemy_placement_range[1]), 300)
+                    a.set_speed(v_x=-1 * random.randint(self.snail_speed_range[0], self.snail_speed_range[1]))
 
             self.enemy_group.add(a)
             del a
 
     def enemy_collision(self) -> bool:
         collisions = pygame.sprite.spritecollide(self.player_sprite, self.enemy_group, False)
-        return bool(collisions)
+        result = False
+        for i in collisions:
+            if not isinstance(i, Toad):
+                result = True
+            else:
+                self.player_sprite.get_toaded()
+                i.mask.kill()
+                i.kill()
+        return result
 
     def weapon_collision(self):
         for weapon in self.player_attachments:
@@ -1184,7 +1246,7 @@ class HMGame(object):
             self.screen.blit(self.ammo, (715, 335))
 
     def draw_jumps_count(self):
-        if not self.kills > 0:
+        if not (self.kills > 0 or self.endless):
             return None
         for i in range(self.player_sprite.max_jumps):
             if i < self.player_sprite.jumps:
@@ -1253,34 +1315,71 @@ class HMGame(object):
             self.titles.pop(0)
 
     def draw_menu_ui(self):
+        self.UI_epilepsy.update()
+        self.UI_epilepsy.draw(self.screen)
+
         if self.progress.get('color_blind_unlocked', False):
             self.UI_colorblind.update()
             self.UI_colorblind.draw(self.screen)
 
+        if self.progress.get('sralker_unlocked', False):
+            self.UI_endless.update()
+            self.UI_endless.draw(self.screen)
+
+
     def difficulty_scaling(self):
-        if self.kills > 0 and int(self.score) != self.last_rescale_score:
-            self.ground_stiffness = GROUND_STIFFNESS * (131 - int(self.score))/137
+        if (self.kills > 0 or self.endless) and int(self.score) != self.last_rescale_score:
+            if self.endless:
+                _score = min(110 + 27*bool(self.advanced_enemies), int(self.score))
+            else:
+                _score = min(137, int(self.score))
+            self.ground_stiffness = GROUND_STIFFNESS * (131 - _score)/137
 
-            self.player_sprite.max_jumps = 1 + int(self.score)//(30 + 5*self.mask_sprite.stomps)
+            self.player_sprite.max_jumps = 1 + _score//(30 + 5*self.mask_sprite.stomps)
 
-            self.max_ammo = MAX_AMMO_CAPACITY - int(self.score)//6
-            self.pickup_rate = PICKUP_DROP_RATE - int(self.score)//10
+            self.max_ammo = MAX_AMMO_CAPACITY - int(_score)//6
+            self.pickup_rate = PICKUP_DROP_RATE - int(_score)//10
 
-            self.enemy_spawn_interval = ENEMY_SPAWN_INTERVAL_MS - 7 * int(self.score) \
+            self.enemy_spawn_interval = ENEMY_SPAWN_INTERVAL_MS - 7 * int(_score) \
                                         - 50 * bool(self.advanced_enemies and (self.game_state != self.GameState.BEAR_GAME
                                                                                or self.mask_sprite.deflect))
 
-            self.enemy_placement_range = [ENEMY_PLACEMENT_RANGE[0], ENEMY_PLACEMENT_RANGE[1] - int(self.score)]
-            self.fly_y_range = [FLY_Y_RANGE[0] - int(self.score)//2, FLY_Y_RANGE[1] + int(self.score)]
-            self.snail_speed_range = [SNAIL_SPEED_RANGE[0] + 50 + int(self.score), SNAIL_SPEED_RANGE[1] + 2*int(self.score)]
-            self.fly_speed_range = [FLY_SPEED_RANGE[0] + 50 + int(self.score), FLY_SPEED_RANGE[1] + 2*int(self.score)]
+            self.enemy_placement_range = [ENEMY_PLACEMENT_RANGE[0], ENEMY_PLACEMENT_RANGE[1] - int(_score)]
+            self.fly_y_range = [FLY_Y_RANGE[0] - int(_score)//2, FLY_Y_RANGE[1] + int(_score)]
+            self.snail_speed_range = [SNAIL_SPEED_RANGE[0] + 50 + int(_score), SNAIL_SPEED_RANGE[1] + 2*int(_score)]
+            self.fly_speed_range = [FLY_SPEED_RANGE[0] + 50 + int(_score), FLY_SPEED_RANGE[1] + 2*int(_score)]
 
             self.last_rescale_score = int(self.score)
 
     def enter_the_sandman(self):
+        if self.endless:
+            now = pygame.time.get_ticks()
+            if (now - self.run_start_time) % 90000 >= 60000:
+                if not self.advanced_enemies:
+                    if self.game_state == self.GameState.TIGER_GAME:
+                        self.mask_sprite.image = self.tiger_mask_worn
+                    self.kill_run_init_sound.play()
+                    boss_music_list = [self.enter_the_sandman_music,
+                                       self.enter_the_siemen_music]
+                    if self.progress.get('all speeches', False):
+                        boss_music_list.append(self.enter_the_sweden_music)
+                    boss_music = random.choice(boss_music_list)
+                    self.music_handler.music_play(boss_music)
+                self.advanced_enemies = True
+                self.sky_is_over = True
+            else:
+                if self.advanced_enemies:
+                    if self.game_state == self.GameState.TIGER_GAME:
+                        self.mask_sprite.image = pygame.transform.scale(self.tiger_mask_normal, (90, 80))
+                    # self.kill_run_init_sound.play()
+                    self.choose_music(self.mask_sprite.type_)
+
+                self.advanced_enemies = False
+                self.sky_is_over = False
+            return
+
         if not self.advanced_enemies and self.kills > 0 and int(self.score) >= 110:
             if not self.advanced_enemies:
-                # self.sky_color_surf.set_alpha(0)
                 if self.game_state == self.GameState.TIGER_GAME:
                     self.mask_sprite.image = self.tiger_mask_worn
                 self.kill_run_init_sound.play()
@@ -1292,8 +1391,6 @@ class HMGame(object):
                 self.music_handler.music_play(boss_music)
             self.advanced_enemies = True
             self.sky_is_over = True  # I don't wanna see you go
-        elif self.progress.get('tiger', False) and not self.kills > 0 and int(self.score) >= 120:
-            self.enemy_spawn_interval = ENEMY_SPAWN_INTERVAL_MS - 630
         elif not self.kills > 0 and int(self.score) >= 110:
             self.enemy_spawn_interval = ENEMY_SPAWN_INTERVAL_MS - 500
 
@@ -1312,7 +1409,16 @@ class HMGame(object):
             if self.kills == 0:
                 self.kill_run_init_sound.play()
             self.kills += 1
-        if not self.progress.get('achieved 110', False) and not self.advanced_enemies:
+        if self.endless:
+            match mode:
+                case 'snail_kill':
+                    self.score += 1.4 + 2.1 * bool(self.advanced_enemies)
+                case 'fly_kill':
+                    self.score += 3.4 + 3.6 * bool(self.advanced_enemies)
+                case 'pass':
+                    self.score += 1.1 + 0.9 * bool(not self.advanced_enemies)
+        elif not self.progress.get('achieved 110', False) and not self.advanced_enemies:
+            # never achieved 110 and not sandman
             match mode:
                 case 'snail_kill':
                     self.score += 2.0
@@ -1322,6 +1428,7 @@ class HMGame(object):
                     self.score += 1.0
         elif self.progress.get('achieved 110', False) and not self.advanced_enemies:
             if self.score < 110:
+                # non sandman, 110 was achieved, score < 110
                 match mode:
                     case 'snail_kill':
                         self.score += 3.9
@@ -1330,6 +1437,7 @@ class HMGame(object):
                     case 'pass':
                         self.score += 3.2
             else:
+                # non sandman, 110 was achieved, score > 110
                 match mode:
                     case 'snail_kill':
                         self.score += 1.0
@@ -1340,11 +1448,12 @@ class HMGame(object):
                         if self.progress.get('color_blind_unlocked', False) is False:
                             self.score += self.progress.get('deaths', 0) / 50
         else:
+            # boss mode
             match mode:
                 case 'snail_kill':
-                    self.score += 0.0
+                    self.score += 0.5 * bool(self.endless)
                 case 'fly_kill':
-                    self.score += 1.0
+                    self.score += 1.0 + 1.0 * bool(self.endless)
                 case 'pass':
                     self.score += 0.25
                     if self.progress.get('zebra', False) is False:
