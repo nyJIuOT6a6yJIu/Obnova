@@ -2,6 +2,7 @@
 #  - add sralker after bad apple run (so sad)
 #  -   UI hint
 #  -   make it into scene
+#  - add this as super secret ending if SOMEHOW tutorial is beaten
 
 import math
 import random
