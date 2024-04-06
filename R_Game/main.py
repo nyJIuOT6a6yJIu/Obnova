@@ -1,10 +1,12 @@
 # TODO:
-#  - розібратись з мікшером
-#  - add sralker after bad apple run
-#     UI hint
-
-#  - (?) make stomp collision wider
-#  - (?) introduce speed limit (so that game wont crush)
+#  - add sralker after bad apple run (so sad)
+#  -   UI hint
+#  -   make it into scene
+#  - harder pacifist after nuke ending (more intermediate stages between 0 and 110)
+#  - fix frogs paint_event
+#  - swap second poroh speech
+#  - give new weapon during CB as pick_up event (so that previous weapon is yeeted)
+#  - made saturday into wednesday
 
 import math
 import random
@@ -57,23 +59,10 @@ class MusicHandler:
 
     @staticmethod
     def music_stop(fadeout=0):
-            if fadeout is None:
-                pygame.mixer_music.stop()
-            else:
-                pygame.mixer_music.fadeout(fadeout)
-
-
-    # def music_toggle(self):
-    #     if self.current_track is None:
-    #         return
-    #     if self.IsPaused:
-    #         # self.current_track.unpause()
-    #         pygame.mixer_music.unpause()
-    #         self.IsPaused = False
-    #     else:
-    #         # self.current_track.pause()
-    #         pygame.mixer_music.pause()
-    #         self.IsPaused = True
+        if fadeout is None:
+            pygame.mixer_music.stop()
+        else:
+            pygame.mixer_music.fadeout(fadeout)
 
 
 class HMGame(object):
@@ -154,9 +143,7 @@ class HMGame(object):
         self.screen.blit(_warning_text_, _rect_)
         pygame.display.update()
 
-        a = time.time()
         self.load_sounds()
-        print(time.time() - a)
 
         self.music_handler = MusicHandler()
 
@@ -326,7 +313,7 @@ class HMGame(object):
         self.jump_sound          = pygame.mixer.Sound('R_Game/audio/misc sounds/jump.mp3')
 
     def choose_music(self, mode):
-        music_ = [None]
+        music_ = [self.menu_music]
         if mode == 'first':
             return self.music_handler.music_play(self.first_run_music)
         match mode:
@@ -339,7 +326,7 @@ class HMGame(object):
             case 'tiger':
                 music_ = [self.tiger_music]
             case 'frog':
-                music_ = [None, self.run_music_1, self.bear_music, self.zebra_music, self.tiger_music]
+                music_ = [self.run_music_1, self.bear_music, self.zebra_music, self.tiger_music]
 
         if self.progress.get(f"{mode}_played", False):
             if self.progress.get('rooster_finished', False):
@@ -357,10 +344,7 @@ class HMGame(object):
 
         choice_ = random.choice(music_)
 
-        if choice_ is not None:
-            self.music_handler.music_play(choice_)
-        elif self.music_handler.current_track is not self.menu_music:
-            self.music_handler.music_play(self.menu_music)
+        self.music_handler.music_play(choice_)
 
     def set_up_game(self, _mode='rooster'):
         self.sky_color_surf.fill(self.sky_color.return_color())
@@ -570,7 +554,7 @@ class HMGame(object):
                     self.set_up_game('zebra')
                 elif self.progress.get('tiger', False) and event.key == pygame.K_t:
                     self.set_up_game('tiger')
-                elif datetime.today().isoweekday() == 3 and event.key == pygame.K_f:
+                elif datetime.today().isoweekday() == 6 and event.key == pygame.K_f:
                     self.set_up_game('frog')
 
             elif self.game_state == self.GameState.DEFAULT_MENU and event.type == pygame.MOUSEBUTTONDOWN:
@@ -719,7 +703,7 @@ class HMGame(object):
         self.screen.fill(self.sky_color.return_color())
 
         self.screen.blit(self.player_menu, self.player_menu_rect)
-        if datetime.today().isoweekday() == 3:
+        if datetime.today().isoweekday() == 6:
             self.screen.blit(self.frog_menu, self.frog_menu_rect)
         elif not self.runner_completed():
             if self.progress.get('all speeches', False):
@@ -749,7 +733,7 @@ class HMGame(object):
             zebra_game_line = 'Press Z for zebra'
         if self.progress.get('tiger', False):
             tiger_game_line = 'Press T for tiger'
-        if datetime.today().isoweekday() == 3:
+        if datetime.today().isoweekday() == 6:
             frog_game_line = 'Its Wednesday, ma dudes (F)'
 
         final_score_surf = self.text_to_surface_mf(score_line, True, 'Red')

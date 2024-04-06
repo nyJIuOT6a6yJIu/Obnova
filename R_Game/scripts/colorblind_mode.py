@@ -1,3 +1,6 @@
+# TODO: do not show shields during final sequence
+#   hide mask on zebra -> tiger change
+
 import math
 import random
 
@@ -766,6 +769,7 @@ class Touhou:
         elif time_pass >= 217700:
             self.game.game_state = self.game.GameState.DEFAULT_MENU
             self.game.progress['sralker_unlocked'] = True
+            self.game.music_handler.music_stop()
 
         if self.sky_is_over or self.game.mask_sprite.dash_status == 'active':
             self.game.screen.blit(self.foreground, (0, 0))
