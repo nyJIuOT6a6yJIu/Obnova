@@ -1021,8 +1021,6 @@ class HMGame(object):
 
             save(self.progress)
 
-            # 0(self.player_sprite.rect.top - self.player_sprite.rect.bottom)
-
     def runner_completed(self):
         return self.progress.get('sralker_unlocked', False) and \
                self.progress.get('rooster_finished', False) and \
@@ -1031,7 +1029,6 @@ class HMGame(object):
                self.progress.get('zebra_finished', False) and \
                self.progress.get('frog_finished', False) and \
                self.progress.get('all speeches', False)
-
 
     def add_new_enemy(self, snail_relative_chance: int, fly_relative_chance: int):
         if random.randint(1, snail_relative_chance + fly_relative_chance) <= fly_relative_chance:
