@@ -2,7 +2,6 @@
 #  - add sralker after bad apple run (so sad)
 #  -   UI hint
 #  -   make it into scene
-#  - fix frogs paint_event
 
 import math
 import random
@@ -1368,11 +1367,11 @@ class HMGame(object):
         if self.endless:
             match mode:
                 case 'snail_kill':
-                    self.score += 1.4 + 2.1 * bool(self.advanced_enemies)
+                    self.score += 1.4 - 1.0 * bool(self.advanced_enemies)
                 case 'fly_kill':
                     self.score += 3.4 + 3.6 * bool(self.advanced_enemies)
                 case 'pass':
-                    self.score += 1.1 + 0.9 * bool(not self.advanced_enemies)
+                    self.score += 2.0 - 0.9 * bool(self.advanced_enemies)
         elif not self.progress.get('achieved 110', False) and not self.advanced_enemies:
             # never achieved 110 and not sandman
             match mode:
@@ -1414,6 +1413,7 @@ class HMGame(object):
                     self.score += 0.25
                     if self.progress.get('zebra', False) is False:
                         self.score += self.progress.get('deaths', 0) / 50
+
 
 if __name__ == '__main__':
     pass
