@@ -3,8 +3,7 @@
 #  -   UI hint
 #  -   make it into scene
 #  - fix frogs paint_event
-#  - swap second poroh speech
-#  - made saturday into wednesday
+#  - render less fun as first run
 
 import math
 import random
@@ -402,7 +401,7 @@ class HMGame(object):
         self.enemy_group = pygame.sprite.LayeredUpdates()
         self.enemy_attachments = pygame.sprite.LayeredUpdates()
 
-        self.score = 0
+        self.score =  0
         self.kills = 0
 
         self.gunshot_afterimage = []
@@ -554,7 +553,7 @@ class HMGame(object):
                     self.set_up_game('zebra')
                 elif self.progress.get('tiger', False) and event.key == pygame.K_t:
                     self.set_up_game('tiger')
-                elif datetime.today().isoweekday() == 6 and event.key == pygame.K_f:
+                elif datetime.today().isoweekday() == 3 and event.key == pygame.K_f:
                     self.set_up_game('frog')
 
             elif self.game_state == self.GameState.DEFAULT_MENU and event.type == pygame.MOUSEBUTTONDOWN:
@@ -703,7 +702,7 @@ class HMGame(object):
         self.screen.fill(self.sky_color.return_color())
 
         self.screen.blit(self.player_menu, self.player_menu_rect)
-        if datetime.today().isoweekday() == 6:
+        if datetime.today().isoweekday() == 3:
             self.screen.blit(self.frog_menu, self.frog_menu_rect)
         elif not self.runner_completed():
             if self.progress.get('all speeches', False):
@@ -733,7 +732,7 @@ class HMGame(object):
             zebra_game_line = 'Press Z for zebra'
         if self.progress.get('tiger', False):
             tiger_game_line = 'Press T for tiger'
-        if datetime.today().isoweekday() == 6:
+        if datetime.today().isoweekday() == 3:
             frog_game_line = 'Its Wednesday, ma dudes (F)'
 
         final_score_surf = self.text_to_surface_mf(score_line, True, 'Red')
@@ -949,27 +948,27 @@ class HMGame(object):
 
             self.screen.blit(self.poroh_banner, (0, 0))
 
-        if time_pass_ms > 71000:  # black-out during second speech
-            _alpha = pygame.math.clamp((time_pass_ms - 71000)*255 // 1500, 0, 255)
-            self.sky_color_foreground.set_alpha(_alpha)
-            self.screen.blit(self.sky_color_foreground, (0, 0))
-
         # checks ending time
-        # 30700
-        first_speech = not self.progress.get('color_blind_unlocked', False)
-        second_speech = self.progress.get('color_blind_unlocked', False)
-        third_speech = self.progress.get('both speeches', False)
-        all_speeches = self.progress.get('all speeches', False)
-        if (time_pass_ms > 600 and all_speeches) or \
-           (time_pass_ms > 78200 and second_speech) or \
-           (time_pass_ms > 30700 and third_speech) or \
-           (time_pass_ms > 10700 and first_speech):
+
+        if self.progress.get('all speeches', False):
+            speech_number = 4
+        elif self.progress.get('both speeches', False):
+            speech_number = 3
+        elif self.progress.get('color_blind_unlocked', False):
+            speech_number = 2
+        else:
+            speech_number = 1
+
+        if (time_pass_ms > 600 and speech_number == 4) or \
+           (time_pass_ms > 30700 and speech_number == 3) or \
+           (time_pass_ms > 11500 and speech_number == 2) or \
+           (time_pass_ms > 10700 and speech_number == 1):
             self.game_state = self.GameState.NO_KILL_MENU
-            if first_speech:
+            if speech_number == 1:
                 self.progress['color_blind_unlocked'] = True
-            if second_speech:
+            elif speech_number == 2:
                 self.progress['both speeches'] = True
-            if third_speech:
+            if speech_number == 3:
                 self.progress['all speeches'] = True
 
             self.music_handler.music_play(self.pacifist_menu_music)
