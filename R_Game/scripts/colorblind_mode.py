@@ -466,7 +466,7 @@ class CB_SpinGirl(pygame.sprite.Sprite):
         self.x = -100
 
     def update(self):
-        self.x += 400 * self.source.game.delta_time / 1000
+        self.x += 430 * self.source.game.delta_time / 1000
         self.rect.centerx = int(self.x)
         girl_index = min(max(self.rect.centerx // 27, 0), 29)
         girl_frame = self.source.girl[girl_index]

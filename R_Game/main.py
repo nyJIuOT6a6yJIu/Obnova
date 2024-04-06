@@ -3,7 +3,6 @@
 #  -   UI hint
 #  -   make it into scene
 #  - fix frogs paint_event
-#  - render less fun as first run
 
 import math
 import random
@@ -401,7 +400,7 @@ class HMGame(object):
         self.enemy_group = pygame.sprite.LayeredUpdates()
         self.enemy_attachments = pygame.sprite.LayeredUpdates()
 
-        self.score =  0
+        self.score = 0
         self.kills = 0
 
         self.gunshot_afterimage = []
@@ -448,7 +447,9 @@ class HMGame(object):
         self.sky_color_surf.set_alpha(255)
         self.ground_surf.set_alpha(255)
         self.sky_color_foreground.set_alpha(0)
-        # self.kill_run = False
+        if self.no_epilepsy:
+            self.sky_color_foreground.fill((208, 244, 247))
+            self.sky_color_foreground.set_alpha(80)
 
         self.choose_music(mode)
 
@@ -596,11 +597,9 @@ class HMGame(object):
             self.sky_color.increment(inc)
         self.screen.blit(self.ground_surf, (0, 300))
 
-        if self.no_epilepsy:
-            self.screen.blit(self.sky_color_surf, (0, 0))
-            self.screen.blit(self.sky_surf, (0, 0))
-        elif mode == 'first':
-            self.screen.blit(self.normal_sky_surf, (0, 0))
+        if mode == 'first' or self.no_epilepsy:
+            if not (self.sky_is_over or self.mask_sprite.dash_status == 'active'):
+                self.screen.blit(self.normal_sky_surf, (0, 0))
         else:
             if not self.sky_is_over and self.mask_sprite.dash_status != 'active':
                 self.screen.blit(self.sky_color_surf, (0, 0))
@@ -696,6 +695,9 @@ class HMGame(object):
             self.sky_color_foreground.set_alpha(max(min(137, int(self.score)) - 50, 60))
             self.ground_surf.set_alpha(max(365 - 3*min(137, int(self.score)), 50))
             self.screen.blit(self.sky_color_foreground, (0, 0))
+        elif self.no_epilepsy and (self.sky_is_over or self.mask_sprite.dash_status == 'active'):
+            self.screen.blit(self.sky_color_foreground, (0, 0))
+
 
     def menu_frame(self):
 

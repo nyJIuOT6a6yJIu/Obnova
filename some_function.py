@@ -15,7 +15,6 @@ def load():
     except Exception as e:
         print(e)
         progress = None
-
     return progress
 
 
