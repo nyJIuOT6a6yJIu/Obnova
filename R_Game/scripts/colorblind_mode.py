@@ -1,6 +1,3 @@
-# TODO: do not show shields during final sequence
-#   hide mask on zebra -> tiger change
-
 import math
 import random
 
@@ -661,13 +658,16 @@ class Touhou:
         self.game.screen.blit(self.ground_surf, (0, 300))
 
         self.game.music_handler.music_play(self.music)
+        # self.game.music_handler.music_stop()
+        # pygame.mixer_music.load('R_Game/audio/misc music/color_blind.mp3')
+        # pygame.mixer_music.play(-1, start=105)  #fade_ms=400)
         self.start = pygame.time.get_ticks()
 
 
     def runtime_frame(self):
         now = pygame.time.get_ticks()
 
-        time_pass = now - self.start #+ 200000
+        time_pass = now - self.start #+ 105000
 
         if time_pass < 4000:
             y = (time_pass)//10
@@ -705,23 +705,23 @@ class Touhou:
                 # list(type, spawn time, spawn location, spawn speed, args)
                 speed = -700
                 self.game.enemy_spawn = [['fly', 111900, 140, -750, 0], ['fly', 112300, 140, -720, 0],
-                                         ['snail', 112900, 300, speed, 0], ['bat', 113400, 130, speed, 20],
-                                         ['snail', 113800, 300, speed, 0], ['bat', 114300, 130, speed, 20],
-                                         ['snail', 114600, 300, speed, 0], ['bat', 115100, 130, speed, 20],
-                                         ['snail', 115600, 300, speed, 0], ['snail', 116100, 300, speed, 0],
-                                         ['snail', 116400, 300, speed, 20], ['bat', 116850, 130, speed, 20],
-                                         ['snail', 117300, 150, speed, 20], ['bat', 117800, 130, speed, 20],
-                                         ['snail', 118100, 150, speed, 20], ['bat', 118600, 130, speed, 20],
-                                         ['snail', 119000, 150, speed, 20], ['snail', 119500, 300, speed, 0],
-                                         ['snail', 119900, 300, speed, 20], ['bat', 120300, 130, speed, 20],
+                                         ['snail', 112800, 300, speed, 0], ['bat', 113300, 130, speed, 20],
+                                         ['snail', 113650, 300, speed, 0], ['bat', 114150, 130, speed, 20],
+                                         ['snail', 114500, 300, speed, 0], ['bat', 115000, 130, speed, 20],
+                                         ['snail', 115350, 300, speed, 0], ['snail', 115800, 300, speed, 0],
+                                         ['snail', 116250, 300, speed, 20], ['bat', 116750, 130, speed, 20],
+                                         ['snail', 117100, 150, speed, 20], ['bat', 117600, 130, speed, 20],
+                                         ['snail', 117950, 150, speed, 20], ['bat', 118450, 130, speed, 20],
+                                         ['snail', 118800, 150, speed, 20], ['snail', 119250, 300, speed, 0],
+                                         ['snail', 119700, 300, speed, 20], ['bat', 120200, 130, speed, 20],
 
-                                         ['snail', 120700, 300, speed, 0], ['bat', 121200, 130, speed, 20],
-                                         ['snail', 121600, 300, speed, 0], ['bat', 122100, 130, speed, 20],
-                                         ['snail', 122500, 300, speed, 0], ['snail', 122900, 300, speed, 0],
-                                         ['snail', 122680, 300, speed, 20],['bat', 123050, 130, speed, 20],
-                                         ['snail', 123400, 150, speed, 20], ['bat', 123900, 130, speed, 20],
-                                         ['snail', 124200, 150, speed, 20], ['bat', 124700, 130, speed, 20],
-                                         ['snail', 125100, 150, speed, 20], #['bat', 125600, 130, speed, 20],
+                                         ['snail', 120650, 300, speed, 0], ['bat', 121150, 130, speed, 20],
+                                         ['snail', 121500, 300, speed, 0], ['bat', 122000, 130, speed, 20],
+                                         ['snail', 122350, 300, speed, 0], ['snail', 122800, 300, speed, 0],
+                                         ['snail', 123250, 300, speed, 20],['bat', 123750, 130, speed, 20],
+                                         ['snail', 124100, 150, speed, 20], ['bat', 124600, 130, speed, 20],
+                                         ['snail', 124950, 150, speed, 20],
+
                                          ['fly', 125600, 100, -760, 0], ['fly', 125700, 140, -755, 0],
                                          ['fly', 125800, 70, -750, 0], ['fly', 125900, 120, -745, 0],
                                          ['fly', 126000, 80, -740, 0], ['fly', 126050, 60, -735, 0],
@@ -831,7 +831,6 @@ class Touhou:
                     self.game.mask_sprite.deflect_ability()
                 else:
                     self.game.game_state = self.game.GameState.DEFAULT_MENU
-                    # self.game.music_handler.music_stop(500)
                     self.game.enemy_spawn = list()
                     cb_deaths = self.game.progress.get('touhou deaths', 0)
                     cb_deaths += 1
@@ -861,8 +860,6 @@ class Touhou:
                 self.girl_sprite.kill()
                 self.girl_sprite = 4  # because why not lmao
 
-    # TODO: dont be lazy, add alpha channel and a-channel restoration on mask set-up
-    # TODO: better UI placement
     def draw_spec_abilities(self):
         if self.game.mask_sprite.bear_activation_time is not None:
             _alpha = int(255 * math.sin(1 + (600 - self.game.mask_sprite.bear_activation_time)/300))
@@ -1078,7 +1075,6 @@ class Touhou:
         self.game.player_sprite.weapon = None
         if new_mask in ['rooster', 'bear']:
             self.game.player_sprite.pick_up_weapon(CB_Weapon(self))
-        # TODO: add alpha channel restoration
 
     def weapon_collision(self):
         if self.game.mask_sprite.type_ == 'tiger' and self.game.mask_sprite.punch_status == 'active':

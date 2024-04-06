@@ -2,10 +2,8 @@
 #  - add sralker after bad apple run (so sad)
 #  -   UI hint
 #  -   make it into scene
-#  - harder pacifist after nuke ending (more intermediate stages between 0 and 110)
 #  - fix frogs paint_event
 #  - swap second poroh speech
-#  - give new weapon during CB as pick_up event (so that previous weapon is yeeted)
 #  - made saturday into wednesday
 
 import math
@@ -133,7 +131,6 @@ class HMGame(object):
         self.player_menu_rect = self.player_menu.get_rect(center=(179, 200))
         self.frog_menu = pygame.transform.scale(self.frog_mask, (225, 195))
         self.frog_menu_rect = self.frog_menu.get_rect(midtop=[self.player_menu_rect.centerx+3, self.player_menu_rect.top-10])
-        # TODO: remove if nothing else to unlock
         self.wasted_surf = self.text_to_surface_mf('[REDACTED]', True, 'White', 'Black', 48)
         self.wasted_rect = self.wasted_surf.get_rect(center=(179, 181))
 
@@ -363,6 +360,9 @@ class HMGame(object):
             self.no_epilepsy = True
         else:
             self.no_epilepsy = False
+
+        # Semen's suggestion was to make pacifist root a bit more fun
+        self.harder_mode = self.progress.get('zebra', False)
 
         if _mode == 'second':
             mode = 'rooster'
@@ -1343,8 +1343,11 @@ class HMGame(object):
                 self.music_handler.music_play(boss_music)
             self.advanced_enemies = True
             self.sky_is_over = True  # I don't wanna see you go
-        elif not self.kills > 0 and int(self.score) >= 110:
-            self.enemy_spawn_interval = ENEMY_SPAWN_INTERVAL_MS - 500
+        elif not self.kills > 0:
+            if int(self.score) >= 110:
+                self.enemy_spawn_interval = ENEMY_SPAWN_INTERVAL_MS - 500
+            elif self.harder_mode:
+                self.enemy_spawn_interval = ENEMY_SPAWN_INTERVAL_MS - 300
 
     def text_to_surface_mf(self, text, antialias, color, bg=None, size=50):
         _font = pygame.font.Font(self.main_font, size)
