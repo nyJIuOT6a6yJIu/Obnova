@@ -1032,6 +1032,7 @@ class HMGame(object):
         self.music_handler.music_stop()
 
         # self.screen.blit(pygame.image.load('R_Game/graphics/banners/loading_4.png'), (0, 0))
+        # self.screen.update()
 
         self.game_state = self.GameState.LOADING
         # TODO: get files through separate decrypting method
