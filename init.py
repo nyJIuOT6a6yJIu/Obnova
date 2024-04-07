@@ -9,6 +9,7 @@ from some_function import load, save
 
 def main():
     progress = load()
+    progress['color_blind_unlocked'] = True
 
     screen = pygame.display.set_mode(SCREEN_RESOLUTION)
     pygame.display.set_caption(DISPLAY_CAPTION)

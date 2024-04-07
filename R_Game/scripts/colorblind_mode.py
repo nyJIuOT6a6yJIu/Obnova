@@ -723,7 +723,6 @@ class Touhou:
                                          ['fly', 125600, 100, -760, 0], ['fly', 125700, 140, -755, 0],
                                          ['fly', 125800, 70, -750, 0], ['fly', 125900, 120, -745, 0],
                                          ['fly', 126000, 80, -740, 0], ['fly', 126050, 60, -735, 0],
-                                         ['snail', 126100, 150, -420, 20],
 
                                          ['leaf', 126250, 670, 0, 7], ['leaf', 126550, 270, 0, 5],
                                          ['leaf', 126750, 134, 0, 0], ['leaf', 127450, 534, 0, 1],
@@ -762,6 +761,7 @@ class Touhou:
             self.sky_is_over = True
 
             self.change_mask('None')
+            self.maskless_enemies = True
             self.score = min(int(137 + 62 * (time_pass - 209990) / 2110), 199)
 
         elif time_pass >= 217700:
