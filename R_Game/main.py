@@ -27,7 +27,8 @@ from R_Game.scripts.player_sprite import Player, Mask, Weapon, Punch, Stomp
 from R_Game.scripts.fly_sprite import Fly, Bat
 from R_Game.scripts.snail_sprite import Snail, Cham, Toad, Stomped_Snail
 
-from R_Game.config.config import (STOMP_SPEED,
+from R_Game.config.config import (DISPLAY_CAPTION,
+                                  STOMP_SPEED,
                                   GRAVITY_ACCELERATION,
                                   GROUND_STIFFNESS,
                                   ENEMY_SPAWN_INTERVAL_MS,
@@ -36,7 +37,8 @@ from R_Game.config.config import (STOMP_SPEED,
                                   SNAIL_SPEED_RANGE,
                                   FLY_SPEED_RANGE,
                                   MAX_AMMO_CAPACITY,
-                                  PICKUP_DROP_RATE)
+                                  PICKUP_DROP_RATE,
+                                  FINAL_RESOLUTION)
 
 from R_Game.config.titles import NUKE_TITLES
 
@@ -66,6 +68,9 @@ class HMGame(object):
 
     class GameState(Enum):
         EXIT         = auto()
+        LOADING      = auto()
+
+        FINAL        = auto()
 
         FIRST_GAME   = auto()
         FIRST_MENU   = auto()
@@ -483,6 +488,10 @@ class HMGame(object):
                     self.menu_frame_first()
                 case self.GameState.COLOR_BLIND:
                     self.cb_mode.runtime_frame()
+                case self.GameState.LOADING:
+                    pass
+                case self.GameState.FINAL:
+                    self.final_animation()
             if self.game_state != self.GameState.EXIT:
                 pygame.display.update()
                 self.clock.tick(60)
@@ -556,6 +565,8 @@ class HMGame(object):
                     self.set_up_game('tiger')
                 elif datetime.today().isoweekday() == 3 and event.key == pygame.K_f:
                     self.set_up_game('frog')
+                elif self.progress.get('sralker_unlocked', False) and event.key == pygame.K_n:
+                    self.load_final()
 
             elif self.game_state == self.GameState.DEFAULT_MENU and event.type == pygame.MOUSEBUTTONDOWN:
                 for elem in self.UI_colorblind:
@@ -642,6 +653,12 @@ class HMGame(object):
         self.enter_the_sandman()
 
         if self.score >= 137 and not self.endless:
+            if self.game_state == self.GameState.FIRST_GAME:
+                # How?
+                self.progress['deaths'] = -1
+                self.kill_run_init_sound.play()
+                return self.load_final()
+
             string_ = f"{self.mask_sprite.type_}_finished"
             self.progress[string_] = True
 
@@ -698,7 +715,6 @@ class HMGame(object):
         elif self.no_epilepsy and (self.sky_is_over or self.mask_sprite.dash_status == 'active'):
             self.screen.blit(self.sky_color_foreground, (0, 0))
 
-
     def menu_frame(self):
 
         self.screen.fill(self.sky_color.return_color())
@@ -721,6 +737,7 @@ class HMGame(object):
         zebra_game_line = ''
         tiger_game_line = ''
         frog_game_line = ''
+        final_line = ''
         if int(self.score) <= 0:
             score_line = ''
             rooster_game_line = 'Press Y key to start'
@@ -736,6 +753,11 @@ class HMGame(object):
             tiger_game_line = 'Press T for tiger'
         if datetime.today().isoweekday() == 3:
             frog_game_line = 'Its Wednesday, ma dudes (F)'
+        if self.progress.get('sralker_unlocked'):
+            if self.progress.get('zebra', False):
+                final_line = 'Press'
+            else:
+                final_line = 'Press N'
 
         final_score_surf = self.text_to_surface_mf(score_line, True, 'Red')
         final_score_rect = final_score_surf.get_rect(center=(380, 100))
@@ -749,6 +771,15 @@ class HMGame(object):
         tiger_game_rect = tiger_game_surf.get_rect(midleft=(415, 290))
         frog_game_surf = self.text_to_surface_mf(frog_game_line, True, 'Pink')
         frog_game_rect = frog_game_surf.get_rect(midleft=(365, 20))
+
+        if final_line:
+            color = self.sky_color.return_color()
+            color = [max(0, i-3) for i in color]
+            final_line_surf = self.text_to_surface_mf(final_line, True, color)
+            final_line_surf = pygame.transform.rotate(final_line_surf, -90)
+            final_line_rect = final_line_surf.get_rect(midbottom=(522, 190))
+
+            self.screen.blit(final_line_surf, final_line_rect)
 
         self.screen.blit(final_score_surf, final_score_rect)
         self.screen.blit(rooster_game_surf, rooster_game_rect)
@@ -995,6 +1026,57 @@ class HMGame(object):
 
         inc = self.delta_time * 60 / 4000
         self.sky_color.increment(inc)
+
+    def load_final(self):
+        self.music_handler.music_stop()
+
+        # self.screen.blit(pygame.image.load('R_Game/graphics/banners/loading_4.png'), (0, 0))
+
+        self.game_state = self.GameState.LOADING
+        # TODO: get files through separate decrypting method
+        # TODO: pidorovich speech
+
+        self.radio = pygame.image.load('radio.png').convert_alpha()
+        self.radio.set_alpha(0)
+
+        self.pidorovich = pygame.image.load('Pidorovich.png')
+        self.pidorovich.set_alpha(0)
+
+        self.screen = pygame.display.set_mode(FINAL_RESOLUTION)
+        self.curtain = pygame.surface.Surface(FINAL_RESOLUTION)
+        self.curtain.fill('Black')
+        self.curtain.set_alpha(0)
+
+        self.game_state = self.GameState.FINAL
+        self.radio_playing = False
+        self.animation_time = pygame.time.get_ticks()
+
+    def final_animation(self):
+        time_pass_ms = pygame.time.get_ticks() - self.animation_time
+        if time_pass_ms < 3000:
+            _alpha = 30 * time_pass_ms // 3000
+            self.radio.set_alpha(_alpha)
+            self.screen.blit(self.radio, (0, 0))
+        elif 3000 <= time_pass_ms <= 15000:
+            if not self.radio_playing:
+                self.music_handler.music_play(['radio_music.mp3', 0.1])
+                self.radio_playing = True
+            _alpha = 50 * (time_pass_ms - 3000) // 12000
+            self.pidorovich.set_alpha(_alpha)
+            self.screen.blit(self.radio, (0, 0))
+            self.screen.blit(self.pidorovich, (0, 0))
+        elif 20000 <= time_pass_ms <= 21000:
+            # TODO: after speech is done
+            pygame.mixer_music.set_volume(0.1 + (time_pass_ms-20000)/1000)
+        elif 285000 <= time_pass_ms <= 296000:
+            _alpha = min(255, 255 * (time_pass_ms - 285000) // 10000)
+            self.curtain.set_alpha(_alpha)
+            self.screen.blit(self.pidorovich, (0, 0))
+            self.screen.blit(self.curtain, (0, 0))
+
+        elif time_pass_ms > 299000:
+            self.game_state = self.GameState.EXIT
+
 
     def game_over(self):
         if self.game_state in [self.GameState.FIRST_MENU, self.GameState.DEFAULT_MENU]:

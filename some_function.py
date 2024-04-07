@@ -89,4 +89,4 @@ def decrypt_file(file_path):
         return False
 
 # encrypt_file('Pidorovich.png')
-decrypt_file('Pidorovich.png')
+# decrypt_file('Pidorovich.png')

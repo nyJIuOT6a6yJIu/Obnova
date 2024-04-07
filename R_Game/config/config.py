@@ -1,6 +1,7 @@
 from typing import Final
 
 SCREEN_RESOLUTION      : Final = (800, 400)
+FINAL_RESOLUTION       : Final = (920, 518)
 DISPLAY_CAPTION        : Final = 'Obnova v0.0.0.5'
 non_specific_byte_string =  b'-dqvcqdggdMqqH3aoYfRlLboWY5tYAAYlVqUcXrjwU0='
 

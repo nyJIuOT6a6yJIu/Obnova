@@ -624,8 +624,6 @@ class Touhou:
 
         self.player_mask = None
 
-        self.deflects = 0
-
         self.sky_is_over = False
         self.maskless_enemies = True
 
@@ -815,7 +813,8 @@ class Touhou:
 
         self.draw_shot_after_image()
 
-        self.draw_spec_abilities()
+        if time_pass < 209000:
+            self.draw_spec_abilities()
         self.draw_out_of_bounds_marker()
         self.draw_ammo_count()
         self.draw_jumps_count()
