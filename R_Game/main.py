@@ -655,12 +655,15 @@ class HMGame(object):
         if self.score >= 137 and not self.endless:
             if self.game_state == self.GameState.FIRST_GAME:
                 # How?
-                self.progress['deaths'] = -1
+                self.progress['color_blind_unlocked'] = True
+                save(self.progress)
+
                 self.kill_run_init_sound.play()
                 return self.load_final()
 
             string_ = f"{self.mask_sprite.type_}_finished"
             self.progress[string_] = True
+            save(self.progress)
 
             if self.kills > 0:
                 self.game_state = self.GameState.NUKE_START
@@ -1003,7 +1006,7 @@ class HMGame(object):
                 self.progress['both speeches'] = True
             if speech_number == 3:
                 self.progress['all speeches'] = True
-
+            save(self.progress)
             self.music_handler.music_play(self.pacifist_menu_music)
 
     def pacifist_menu(self):
