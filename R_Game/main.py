@@ -1,6 +1,7 @@
 # TODO:
-#  - add sralker after bad apple run (so sad)
-#  -   make it into scene (add voice acting bit)
+#  - add farewell txt creation
+#  - add decryption
+#  - encrypt final files and place in dist folder
 
 import math
 import random
@@ -11,7 +12,7 @@ from json import dumps
 
 import pygame
 
-from some_function import save
+from some_function import save, get_files
 
 from R_Game.scripts.color_sine import ColorSine
 from R_Game.scripts.abs_color import ColorAbs
@@ -664,6 +665,7 @@ class HMGame(object):
             save(self.progress)
 
             if self.kills > 0:
+                self.progress['zebra'] = True
                 self.game_state = self.GameState.NUKE_START
                 self.music_handler.music_stop(1050)
                 _color = self.sky_color.return_color()
@@ -941,7 +943,6 @@ class HMGame(object):
         self.draw_titles(time_pass_ms)
 
         if time_pass_ms > 230300:
-            self.progress['zebra'] = True
             self.game_state = self.GameState.NUKE_MENU
             self.sky_color.red, self.sky_color.green, self.sky_color.blue = 0, 0, 0
             self.music_handler.music_play(self.post_nuke_music)
@@ -1031,18 +1032,27 @@ class HMGame(object):
     def load_final(self):
         self.music_handler.music_stop()
 
-        # self.screen.blit(pygame.image.load('R_Game/graphics/banners/loading_4.png'), (0, 0))
-        # self.screen.update()
+        self.screen.blit(pygame.image.load('R_Game/graphics/banners/loading_4.png'), (0, 0))
+        pygame.display.update()
 
         self.game_state = self.GameState.LOADING
-        # TODO: get files through separate decrypting method
-        # TODO: pidorovich speech
 
-        self.radio = pygame.image.load('radio.png').convert_alpha()
+        banner_path, radio_path, music_path, speech_path = get_files()
+
+        self.radio = pygame.image.load(radio_path).convert_alpha()
         self.radio.set_alpha(0)
 
-        self.pidorovich = pygame.image.load('Pidorovich.png')
+        self.pidorovich = pygame.image.load(banner_path)
         self.pidorovich.set_alpha(0)
+
+        self.music_path = music_path
+
+        self.pidorovich_speech = pygame.mixer.Sound(speech_path)
+        self.pidorovich_speech.set_volume(1.0)
+
+        with open('saves/chto_nibood_eshe.txt', 'w') as file:
+            text = "https://www.youtube.com/watch?v=Fb2q141rMNE\n\nSource Code:\nhttps://github.com/nyJIuOT6a6yJIu/Obnova"
+            file.write(text)
 
         self.screen = pygame.display.set_mode(FINAL_RESOLUTION)
         self.curtain = pygame.surface.Surface(FINAL_RESOLUTION)
@@ -1051,32 +1061,41 @@ class HMGame(object):
 
         self.game_state = self.GameState.FINAL
         self.radio_playing = False
+        self.pidorovich_talking = False
+        self.title_changed = False
         self.animation_time = pygame.time.get_ticks()
 
     def final_animation(self):
         time_pass_ms = pygame.time.get_ticks() - self.animation_time
-        if time_pass_ms < 3000:
-            _alpha = 30 * time_pass_ms // 3000
+        if time_pass_ms < 5000:
+            _alpha = 30 * time_pass_ms // 5000
             self.radio.set_alpha(_alpha)
             self.screen.blit(self.radio, (0, 0))
-        elif 3000 <= time_pass_ms <= 15000:
+        elif 5000 <= time_pass_ms <= 17000:
             if not self.radio_playing:
-                self.music_handler.music_play(['radio_music.mp3', 0.1])
+                self.music_handler.music_play([self.music_path, 0.4])
                 self.radio_playing = True
-            _alpha = 50 * (time_pass_ms - 3000) // 12000
+            volume = max(0.05, 0.4 - (time_pass_ms - 5000) / 10000)
+            pygame.mixer_music.set_volume(volume)
+            if time_pass_ms > 6500 and not self.pidorovich_talking:
+                self.pidorovich_speech.play()
+                self.pidorovich_talking = True
+            _alpha = 50 * (time_pass_ms - 5000) // 12000
             self.pidorovich.set_alpha(_alpha)
             self.screen.blit(self.radio, (0, 0))
             self.screen.blit(self.pidorovich, (0, 0))
-        elif 20000 <= time_pass_ms <= 21000:
-            # TODO: after speech is done
-            pygame.mixer_music.set_volume(0.1 + (time_pass_ms-20000)/1000)
-        elif 285000 <= time_pass_ms <= 296000:
-            _alpha = min(255, 255 * (time_pass_ms - 285000) // 10000)
+        elif 26750 <= time_pass_ms <= 30750:
+            pygame.mixer_music.set_volume(0.05 + (time_pass_ms-26750)/4000)
+            if not self.title_changed:
+                pygame.display.set_caption('You can exit now')
+                self.title_changed = True
+        elif 287000 <= time_pass_ms <= 298000:
+            _alpha = min(255, 255 * (time_pass_ms - 287000) // 10000)
             self.curtain.set_alpha(_alpha)
             self.screen.blit(self.pidorovich, (0, 0))
             self.screen.blit(self.curtain, (0, 0))
 
-        elif time_pass_ms > 299000:
+        elif time_pass_ms > 301000:
             self.game_state = self.GameState.EXIT
 
 
