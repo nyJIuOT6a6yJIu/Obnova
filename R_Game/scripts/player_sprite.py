@@ -173,8 +173,6 @@ class Player(pygame.sprite.Sprite):
         self._movement()
         self._animate()
 
-        # print(self.a_pressed, self.d_pressed)
-
 
 class Mask(pygame.sprite.Sprite):
     def __init__(self, _player, mask='rooster', direct_init=True):
@@ -245,7 +243,7 @@ class Mask(pygame.sprite.Sprite):
             self.body.game.score_add(f'{enemy.get_type()}_kill')
             enemy.mask.kill()
             enemy.kill()
-            # self.body.game.kill_run = True
+
         ds = random.choice([self.body.game.death_sound,
                             self.body.game.death_sound_2,
                             self.body.game.death_sound_3,
@@ -258,11 +256,10 @@ class Mask(pygame.sprite.Sprite):
             return
         _now = pygame.time.get_ticks()
         _time_spent = _now - self.dash_used
-        # if _time_spent <= 700:
-        #     self.body.speed[0] = 0
+
         if _time_spent > 250:
             self.dash_status = 'cooldown'
-        if self.dash_cd() <= 0:  # _time_spent > 1300 - 500*bool(self.body.game.kill_run):
+        if self.dash_cd() <= 0:
             self.dash_status = 'ready'
             self.dash_used = None
 
@@ -395,7 +392,7 @@ class Weapon(pygame.sprite.Sprite):
             if self.rect.left < -100 or self.rect.right > 900 or self.rect.top < -100 or self.rect.bottom > 500:
                 self.kill()
         elif self.body:
-            self.rect.center = (self.body.rect.centerx + 30, self.body.rect.centery + 15)  #(self.body.rect.left, self.body.rect.midleft[1] + 15)
+            self.rect.center = (self.body.rect.centerx + 30, self.body.rect.centery + 15)
         else:
             self.rect.bottom = 303 + 3*math.cos(self.t*math.pi/1100)
             self.t = (self.t + self.game.delta_time)%2200

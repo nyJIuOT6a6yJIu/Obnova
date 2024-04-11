@@ -32,7 +32,7 @@ class Fly(pygame.sprite.Sprite):
             self.speed[1] = v_y
 
     def _movement(self):
-        if abs(self.rect.centerx - self.center[0]) > 2: # ???
+        if abs(self.rect.centerx - self.center[0]) > 2:
             self.center[0] = self.rect.centerx
         self.center[0] += self.speed[0] * self.game.delta_time / 1000
         self.rect.centerx = int(self.center[0])
@@ -83,8 +83,6 @@ class Bat(pygame.sprite.Sprite):
         self.phase_1 = random.randint(1, 250)
         self.phase_2 = random.randint(1, 125)
 
-
-
     def set_speed(self, v_x=None, v_y=None):
         if v_x:
             self.speed[0] = v_x
@@ -95,9 +93,9 @@ class Bat(pygame.sprite.Sprite):
         self.difficulty = arg
 
     def _movement(self):
-        if abs(self.rect.centerx - self.center[0]) > 2: # ???
+        if abs(self.rect.centerx - self.center[0]) > 2:
             self.center[0] = self.rect.centerx
-        if abs(self.rect.centery - self.center[1]) > 2: # ???
+        if abs(self.rect.centery - self.center[1]) > 2:
             self.center[1] = self.rect.centery
         self.center[0] += self.speed[0] * self.game.delta_time / 1000
         self.rect.centerx = int(self.center[0])
@@ -106,7 +104,6 @@ class Bat(pygame.sprite.Sprite):
                                + bool(self.difficulty > 1) * 25 * math.cos((self.phase_1+self.t) * math.pi / 250) \
                                + bool(self.difficulty > 2) * 10 * math.cos((self.phase_2+self.t) * math.pi / 125)
         self.t = (self.t + self.game.delta_time) % 1000
-
 
         if self.rect.right < -10:
             self.game.score_add('pass')
@@ -143,6 +140,7 @@ class OwlMask(pygame.sprite.Sprite):
         else:
             self.image.set_alpha(0)
         self.rect.center = (self.body.rect.center[0] - 5, self.body.rect.center[1])
+
 
 class BatMask(pygame.sprite.Sprite):
     def __init__(self, _body, direct_init=True):

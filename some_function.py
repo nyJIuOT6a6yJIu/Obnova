@@ -37,28 +37,23 @@ def encrypt_file(file_path, dest_path):
     try:
         f = Fock_u(non_specific_byte_string)
 
-        # open file for reading purpose
         fin = open(file_path, 'rb')
 
-        # storing image data in variable "image"
         image = fin.read()
         fin.close()
 
-        # converting image into byte array to perform decryption easily on numeric data
         image = bytes(image)
 
         image = f.encrypt(image)
 
-        # opening file for writing purpose
         fin = open(dest_path, 'wb')
 
-        # writing decryption data in image
         fin.write(image)
         fin.close()
-        print('Encryption Done...')
         return True
 
     except Exception as e:
+        print(e)
         return False
 
 
@@ -66,28 +61,23 @@ def decrypt_file(file_path, dest_path):
     try:
         f = Fock_u(non_specific_byte_string)
 
-        # open file for reading purpose
         fin = open(file_path, 'rb')
 
-        # storing image data in variable "image"
         image = fin.read()
         fin.close()
 
-        # converting image into byte array to perform decryption easily on numeric data
         image = bytes(image)
 
         image = f.decrypt(image)
 
-        # opening file for writing purpose
         fin = open(dest_path, 'wb')
 
-        # writing decryption data in image
         fin.write(image)
         fin.close()
-        print('Decryption Done...')
         return True
 
     except Exception as e:
+        print(e)
         return False
 
 

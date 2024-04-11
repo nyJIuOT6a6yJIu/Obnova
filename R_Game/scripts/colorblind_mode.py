@@ -142,7 +142,7 @@ class CB_Leaf(pygame.sprite.Sprite):
         self.angle = 0
 
     def rotate(self):
-        self.angle += 2  # 180 * self.source.game.delta_time / 1000
+        self.angle += 2
         self.image = pygame.transform.rotozoom(self.og_image, self.angle, 1)
         self.rect = self.image.get_rect(center=self.rect.center)
 
@@ -341,7 +341,6 @@ class CB_Mask(Mask):
         for enemy in self.body.game.enemy_group:
             enemy.mask.kill()
             enemy.kill()
-            # self.body.game.kill_run = True
 
     def dash_cd(self):
         return 1300 + self.dash_used - pygame.time.get_ticks() - 700 * bool(self.culmination)
@@ -656,16 +655,14 @@ class Touhou:
         self.game.screen.blit(self.ground_surf, (0, 300))
 
         self.game.music_handler.music_play(self.music)
-        # self.game.music_handler.music_stop()
-        # pygame.mixer_music.load('R_Game/audio/misc music/color_blind.mp3')
-        # pygame.mixer_music.play(-1, start=105)  #fade_ms=400)
+
         self.start = pygame.time.get_ticks()
 
 
     def runtime_frame(self):
         now = pygame.time.get_ticks()
 
-        time_pass = now - self.start #+ 105000
+        time_pass = now - self.start
 
         if time_pass < 4000:
             y = (time_pass)//10
@@ -693,36 +690,32 @@ class Touhou:
             self.change_color(0, True)
             self.change_mask('zebra')
 
-        # elif time_pass > 97990 and time_pass < 100000:
-        #     pass
-        #     # self.change_mask('zebra')
-
         elif 109690 <= time_pass < 111000:
             if not self.game.enemy_spawn:
                 self.game.mask_sprite.culmination = True
                 # list(type, spawn time, spawn location, spawn speed, args)
                 speed = -700
-                self.game.enemy_spawn = [['fly', 111900, 140, -750, 0], ['fly', 112300, 140, -720, 0],
-                                         ['snail', 112800, 300, speed, 0], ['bat', 113300, 130, speed, 20],
-                                         ['snail', 113650, 300, speed, 0], ['bat', 114150, 130, speed, 20],
-                                         ['snail', 114500, 300, speed, 0], ['bat', 115000, 130, speed, 20],
-                                         ['snail', 115350, 300, speed, 0], ['snail', 115800, 300, speed, 0],
+                self.game.enemy_spawn = [['fly', 111900, 140, -750, 0],     ['fly', 112300, 140, -720, 0],
+                                         ['snail', 112800, 300, speed, 0],  ['bat', 113300, 130, speed, 20],
+                                         ['snail', 113650, 300, speed, 0],  ['bat', 114150, 130, speed, 20],
+                                         ['snail', 114500, 300, speed, 0],  ['bat', 115000, 130, speed, 20],
+                                         ['snail', 115350, 300, speed, 0],  ['snail', 115800, 300, speed, 0],
                                          ['snail', 116250, 300, speed, 20], ['bat', 116750, 130, speed, 20],
                                          ['snail', 117100, 150, speed, 20], ['bat', 117600, 130, speed, 20],
                                          ['snail', 117950, 150, speed, 20], ['bat', 118450, 130, speed, 20],
                                          ['snail', 118800, 150, speed, 20], ['snail', 119250, 300, speed, 0],
                                          ['snail', 119700, 300, speed, 20], ['bat', 120200, 130, speed, 20],
 
-                                         ['snail', 120650, 300, speed, 0], ['bat', 121150, 130, speed, 20],
-                                         ['snail', 121500, 300, speed, 0], ['bat', 122000, 130, speed, 20],
-                                         ['snail', 122350, 300, speed, 0], ['snail', 122800, 300, speed, 0],
-                                         ['snail', 123250, 300, speed, 20],['bat', 123750, 130, speed, 20],
+                                         ['snail', 120650, 300, speed, 0],  ['bat', 121150, 130, speed, 20],
+                                         ['snail', 121500, 300, speed, 0],  ['bat', 122000, 130, speed, 20],
+                                         ['snail', 122350, 300, speed, 0],  ['snail', 122800, 300, speed, 0],
+                                         ['snail', 123250, 300, speed, 20], ['bat', 123750, 130, speed, 20],
                                          ['snail', 124100, 150, speed, 20], ['bat', 124600, 130, speed, 20],
                                          ['snail', 124950, 150, speed, 20],
 
-                                         ['fly', 125600, 100, -760, 0], ['fly', 125700, 140, -755, 0],
-                                         ['fly', 125800, 70, -750, 0], ['fly', 125900, 120, -745, 0],
-                                         ['fly', 126000, 80, -740, 0], ['fly', 126050, 60, -735, 0],
+                                         ['fly', 125600, 100, -760, 0],  ['fly', 125700, 140, -755, 0],
+                                         ['fly', 125800, 70, -750, 0],   ['fly', 125900, 120, -745, 0],
+                                         ['fly', 126000, 80, -740, 0],   ['fly', 126050, 60, -735, 0],
 
                                          ['leaf', 126250, 670, 0, 7], ['leaf', 126550, 270, 0, 5],
                                          ['leaf', 126750, 134, 0, 0], ['leaf', 127450, 534, 0, 1],
@@ -775,7 +768,6 @@ class Touhou:
         self.draw_sun(time_pass)
 
         if time_pass > 14890 or time_pass < 14490:
-            # last 1.5 sec block inputs, swap model, enlarge model
             if time_pass < 216000:
                 self.game.player.update()
                 self.game.player_attachments.update()
@@ -913,12 +905,6 @@ class Touhou:
     def draw_subtitles(self, time_pass):
         if self.subtitles is None or self.subtitles == []:
             return
-
-        # if 167380 <= time_pass < 167400:
-        #     self.sub_drawn = False
-        #
-        # elif 180980 <= time_pass < 181000:
-        #     self.sub_drawn = False
 
         current_subtitle = self.subtitles[0]
         if time_pass > current_subtitle[0] and not self.sub_drawn:  # pora

@@ -1,14 +1,7 @@
-# TODO:
-#  - add farewell txt creation
-#  - add decryption
-#  - encrypt final files and place in dist folder
-
 import math
 import random
-import time
 from enum import Enum, auto
 from datetime import datetime
-from json import dumps
 
 import pygame
 
@@ -20,13 +13,13 @@ from R_Game.scripts.misc_sprites import SunGroup
 
 from R_Game.scripts.colorblind_mode import Touhou
 
-from R_Game.scripts.MyQT import CheckBox, CB_CheckBox, EndlessMode_CheckBox, Epilepsy_CheckBox
+from R_Game.scripts.MyQT import CB_CheckBox, EndlessMode_CheckBox, Epilepsy_CheckBox
 
 from R_Game.scripts.player_sprite import Player, Mask, Weapon, Punch, Stomp
 from R_Game.scripts.fly_sprite import Fly, Bat
 from R_Game.scripts.snail_sprite import Snail, Cham, Toad, Stomped_Snail
 
-from R_Game.config.config import (DISPLAY_CAPTION,
+from R_Game.config.config import (
                                   STOMP_SPEED,
                                   GRAVITY_ACCELERATION,
                                   GROUND_STIFFNESS,
@@ -37,7 +30,8 @@ from R_Game.config.config import (DISPLAY_CAPTION,
                                   FLY_SPEED_RANGE,
                                   MAX_AMMO_CAPACITY,
                                   PICKUP_DROP_RATE,
-                                  FINAL_RESOLUTION)
+                                  FINAL_RESOLUTION
+                                  )
 
 from R_Game.config.titles import NUKE_TITLES
 
@@ -388,18 +382,14 @@ class HMGame(object):
 
         if mode == 'first':
             self.enemy_spawn = [None, None, 'snail', 'snail', 'fly', 'snail', None]
-            # self.player_sprite.set_attachments(None)
 
-        else:#if mode == 'rooster':
+        else:
             self.enemy_spawn = []
             if mode != 'tiger' and _mode != 'second':
                 self.player_sprite.pick_up_weapon(Weapon(self))
             elif mode != 'tiger' and _mode == 'second':
                 self.pickups.add(Weapon(self, (200, 300)))
                 self.enemy_spawn = [None, 'fly']
-
-
-        # player_attachments.change_layer(mask_sprite, 0)
 
         self.enemy_group = pygame.sprite.LayeredUpdates()
         self.enemy_attachments = pygame.sprite.LayeredUpdates()
@@ -502,7 +492,7 @@ class HMGame(object):
             if event.type == pygame.QUIT:
                 pygame.quit()
                 self.game_state = self.GameState.EXIT
-                # exit()
+
             if self.game_state in [self.GameState.FIRST_GAME,
                                    self.GameState.DEFAULT_GAME,
                                    self.GameState.BEAR_GAME,
@@ -510,18 +500,16 @@ class HMGame(object):
                                    self.GameState.TIGER_GAME,
                                    self.GameState.FROG_GAME,
                                    self.GameState.COLOR_BLIND]:
+
                 # players controls
 
                 if event.type == pygame.KEYDOWN:
-                    # print(f"Pressed: {self.cb_mode.time_pass}")
                     self.player_sprite.player_input(event.key, False)
                 if event.type == pygame.KEYUP:
-                    # print('###')#f"Released: {self.cb_mode.time_pass}")
                     self.player_sprite.player_input(event.key, True)
 
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     self.player_sprite.player_input(event.button, False, event.pos)
-
 
                 # enemy spawn
                 if event.type == self.enemy_spawn_timer and self.game_state == self.GameState.COLOR_BLIND:
@@ -673,7 +661,7 @@ class HMGame(object):
                 self.sky_color = ColorAbs(_color)
                 self.screen.blit(self.ground_surf, (0, 300))
                 self.animation_time = pygame.time.get_ticks()
-                self.sunrays = SunGroup(self)#, self.animation_time)
+                self.sunrays = SunGroup(self)
                 return
 
             else:
@@ -695,7 +683,6 @@ class HMGame(object):
                 else:
                     self.pacifist_speech.play()
 
-                # self.screen.blit(self.ground_surf, (0, 300))
                 self.animation_time = pygame.time.get_ticks()
 
         if self.mask_sprite.dash_status != 'active' \
@@ -849,7 +836,7 @@ class HMGame(object):
         self.sky_color_surf.fill(sky_color)
         self.screen.blit(self.sky_color_surf, (0, 0))
 
-        if a is True and self.advanced_enemies: # this will happen only once
+        if a is True and self.advanced_enemies:  # this will happen only once
             self.advanced_enemies = False
             self.sky_color_foreground.fill('White')
             self.music_handler.music_play(self.nuke_music)
@@ -860,7 +847,7 @@ class HMGame(object):
                 radius = -20 + 145 * round(math.log(time_pass_ms/1000 - 4.7, 10.3), 2)
             else:
                 radius = 0
-            # print(time_pass_ms)
+
             self.sunrays.update(time_pass_ms)
             self.sunrays.draw(self.screen)
             pygame.draw.circle(self.screen, 'White', (365, 170), radius, draw_top_right=True, draw_top_left=True, draw_bottom_left=True)
@@ -896,12 +883,12 @@ class HMGame(object):
             self.sky_color_foreground.set_alpha(alpha_)
 
             self.screen.blit(self.sky_color_foreground, (0, -100))
-        if time_pass_ms > 10000:# and time_pass_ms < 18000:
+        if time_pass_ms > 10000:
             alpha_ = 255 * (time_pass_ms - 10000) // 8000
             w_alpha_ = 70 * (time_pass_ms - 10000) // 4000
             self.sky_color_foreground.set_alpha(alpha_)
             self.wojaks.set_alpha(w_alpha_)
-            # self.screen.blit(self.ground_surf, (0, 300))
+
             if not self.progress.get('zebra', False):
                 self.screen.blit(self.wojaks, (0, 0))
             self.screen.blit(self.sky_color_foreground, (0, 0))
@@ -1160,7 +1147,7 @@ class HMGame(object):
                 a = Snail(self)
                 a.rect.bottomleft = (810, 300)
                 a.set_speed(v_x=-400)
-            else: #elif self.game_state in [self.FIRST_GAME, self.DEFAULT_GAME]:
+            else:
                 if (self.endless or self.game_state == self.GameState.FROG_GAME) and random.randint(1, 8) == 8:
                     a = Toad(self)
                     a.rect.bottomleft = (random.randint(self.enemy_placement_range[0],
@@ -1350,7 +1337,7 @@ class HMGame(object):
         if self.titles is None or self.titles == []:
             return
         current_title = self.titles[0]
-        if time_pass > current_title[0]: # pora
+        if time_pass > current_title[0]:  # pora
             top_text_surf = self.text_to_surface_mf(current_title[2], True, '#0cf3ab', size=60)
             bottom_text_surf = self.text_to_surface_mf(current_title[3], True, '#F30C54', size=52)
             _alpha = 255

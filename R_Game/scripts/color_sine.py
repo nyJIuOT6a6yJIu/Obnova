@@ -1,5 +1,6 @@
 import math
 
+
 class ColorSine:
 
     def __repr__(self):
@@ -20,7 +21,7 @@ class ColorSine:
 
         self.float_inc = 0.0
 
-    def convert_from_abs(self, color):  # TODO: Add slamp
+    def convert_from_abs(self, color):
         self.phases[0] = math.acos((color[0]/255 - self.statics[0]) / self.ampls[0])
         self.phases[1] = math.acos((color[1]/255 - self.statics[1]) / self.ampls[1])
         self.phases[2] = math.acos((color[2]/255 - self.statics[2]) / self.ampls[2])
@@ -39,8 +40,3 @@ class ColorSine:
             self.green = round((self.green + inc) % (360 / self.freqs[1]), 3)
         if self.freqs[2]:
             self.blue = round((self.blue + inc) % (360 / self.freqs[2]), 3)
-
-# a = ColorSine([0, 0, 0], [1, 1, 1], statics=[0.5, 0.5, 0.5], ampls=[0.5, 0.5, 0.5])
-# print(a)
-# a.convert_from_abs((45, 145, 0))
-# print(a)

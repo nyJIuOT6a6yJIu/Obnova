@@ -33,7 +33,7 @@ class Snail(pygame.sprite.Sprite):
             self.speed[1] = v_y
 
     def _movement(self):
-        if abs(self.rect.centerx - self.center[0]) > 2:  # ???
+        if abs(self.rect.centerx - self.center[0]) > 2:
             self.center[0] = self.rect.centerx
         self.center[0] += self.speed[0] * self.game.delta_time / 1000
         self.rect.centerx = int(self.center[0])
@@ -108,7 +108,7 @@ class Cham(pygame.sprite.Sprite):
             self.speed[1] = v_y
 
     def _movement(self):
-        if abs(self.rect.centerx - self.center[0]) > 2:  # ???
+        if abs(self.rect.centerx - self.center[0]) > 2:
             self.center[0] = self.rect.centerx
         self.center[0] += self.speed[0] * self.game.delta_time / 1000
         self.rect.centerx = int(self.center[0])
@@ -233,13 +233,13 @@ class Toad(pygame.sprite.Sprite):
 class ToadMask(pygame.sprite.Sprite):
     def __init__(self, _body):
         super().__init__()
-        image = pygame.transform.scale(_body.game.frog_mask, (51, 45))  # 35
+        image = pygame.transform.scale(_body.game.frog_mask, (51, 45))
         image = pygame.transform.flip(surface=image, flip_x=True, flip_y=False)
         self.image = image
         self.rect = self.image.get_rect()
         self.body = _body
 
-    def update(self):  # TODO: adjust mask
+    def update(self):
         self.rect.bottomleft = (self.body.rect.bottomleft[0] - 13, self.body.rect.bottomleft[1])
 
 class Stomped_Snail(pygame.sprite.Sprite):

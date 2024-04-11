@@ -1,4 +1,4 @@
-class ColorAbs:
+class ColorAbs:  # Color Absolute
 
     def __repr__(self):
         return str(self.return_color())

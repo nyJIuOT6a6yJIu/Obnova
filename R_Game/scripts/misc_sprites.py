@@ -2,14 +2,13 @@
 import pygame
 from pygame.sprite import Sprite, Group
 import math
-# from pygame.math import
 
 
 class SunGroup(Group):
     def __init__(self, game):
         super().__init__()
         self.game = game
-        # self.start_moment = start_moment
+
         self.add(SunRay(game, -105))
         self.add(SunRay(game, -65))
         self.add(SunRay(game, -25))
@@ -37,11 +36,8 @@ class SunRay(Sprite):
         self.ref_image = self.game.sun_ray
         self.angle = 0
         self.rotate_by(angle=init_angle)
-        # TODO: dynamic angular velocity
-        # self.image = self.game.sun_ray
-        # self.rect = self.image.get_rect()
 
-    def rotate_by(self, angle):  #=None):
+    def rotate_by(self, angle):
         self.angle += angle
         self.image = pygame.transform.rotozoom(self.ref_image, self.angle, 1)
         new_center = (365+int(252*math.cos(self.angle*math.pi/180)),
@@ -51,5 +47,3 @@ class SunRay(Sprite):
     def update(self, angle, alpha):
         self.rotate_by(angle)
         self.image.set_alpha(alpha)
-        # if self.angle > 225:
-        #     self.angle = -45
