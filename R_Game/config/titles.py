@@ -11,7 +11,5 @@ NUKE_TITLES = [(11300, 16000, 'Ebansoft proudly presents', ''),
                (144400, 148700, 'Potroshenko sprite', 'provided by sTasyaN <3'),
                (150000, 155700, 'Testers', "Swallow Semen, Lolodymor, Yigar'"),
                (158000, 162700, 'Metal Pipe death sound effect', "Proposed by Yigar'"),
-               (204300, 211000, 'Try to be less violent', 'next time'),
+               (204300, 211000, 'Try to kill less bastards', 'next time'),
                (216000, 228300, 'Thanks for playing', '')]
-
-

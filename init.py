@@ -1,6 +1,8 @@
 import pygame
+import traceback
 
 from R_Game.main import HMGame
+from R_Game.error_window import show_error_window
 
 from R_Game.config.config import SCREEN_RESOLUTION, DISPLAY_CAPTION
 
@@ -17,9 +19,16 @@ def main():
 
     game = HMGame(screen, progress)
 
-    new_save = game.start_game()
+    try:
+        new_save = game.start_game()
+        save(new_save)
+    except Exception as e:
+        error_text = f'Error type: {e}\n\n{traceback.format_exc()}'
+        with open('error_log.txt', 'w') as file:
+            file.write(error_text)
 
-    save(new_save)
+        pygame.mixer.Sound('R_Game/audio/misc sounds/kill_run_init.mp3').play()
+        show_error_window()
 
 
 if __name__ == '__main__':

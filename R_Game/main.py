@@ -653,7 +653,6 @@ class HMGame(object):
             save(self.progress)
 
             if self.kills > 0:
-                self.progress['zebra'] = True
                 self.game_state = self.GameState.NUKE_START
                 self.music_handler.music_stop(1050)
                 _color = self.sky_color.return_color()
@@ -891,6 +890,7 @@ class HMGame(object):
 
             if not self.progress.get('zebra', False):
                 self.screen.blit(self.wojaks, (0, 0))
+
             self.screen.blit(self.sky_color_foreground, (0, 0))
 
         if time_pass_ms > 18700:
@@ -930,6 +930,7 @@ class HMGame(object):
         self.draw_titles(time_pass_ms)
 
         if time_pass_ms > 230300:
+            self.progress['zebra'] = True
             self.game_state = self.GameState.NUKE_MENU
             self.sky_color.red, self.sky_color.green, self.sky_color.blue = 0, 0, 0
             self.music_handler.music_play(self.post_nuke_music)
