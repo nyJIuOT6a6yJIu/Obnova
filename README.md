@@ -5,3 +5,6 @@ But life stuff got in a way, as it always does.
 
 Hopefully, I will return to this game one day and finish it. 
 Thank you all for patience and help <3
+
+
+PS. Main branch is called "release" like that one Richter level. Because I am too cool to push into main lmao.
