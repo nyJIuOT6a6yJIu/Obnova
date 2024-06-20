@@ -79,20 +79,3 @@ def decrypt_file(file_path, dest_path):
     except Exception as e:
         print(e)
         return False
-
-
-def get_files():
-    source_dir = Path('R_Game/not cryptominer/homework/chat gpt killswitch')
-    path_list = [
-        ['R_Game/graphics/banners/Pidorovich.png', 'how_to_counter_ai'],
-        ['R_Game/graphics/misc/radio.png', 'next_statement_is_false'],
-        ['R_Game/audio/misc music/radio_music.mp3', 'previous_statement_is_true'],
-        ['R_Game/audio/misc sounds/final_speech.mp3', 'thanks_for_listening_to_my_ted_talk']
-    ]
-    result = list()
-    for index in range(4):
-        file_path = Path(path_list[index][0])
-        if not file_path.exists():
-            decrypt_file(source_dir/path_list[index][1], file_path)
-        result.append(file_path)
-    return result
