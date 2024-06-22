@@ -7,6 +7,8 @@ import pygame
 from R_Game.config.config import DISPLAY_CAPTION
 from S_Game.config.config import SRALKER_SCREEN_RESOLUTION
 
+from S_Game.scripts.player_sprite import Player
+
 class SGame(object):
     # 48px = 1 meter
 
@@ -31,6 +33,16 @@ class SGame(object):
         self.last_time_frame = 0
         self.clock = pygame.time.Clock()
 
+        self.player_walk_1 = pygame.image.load('R_Game/graphics/Player/player_walk_1.png').convert_alpha()
+        self.player_walk_2 = pygame.image.load('R_Game/graphics/Player/player_walk_2.png').convert_alpha()
+        self.player_stand = pygame.image.load('R_Game/graphics/Player/player_stand.png').convert_alpha()
+
+        self.player = pygame.sprite.GroupSingle()
+        self.player_sprite = Player(self)
+        self.player.add(self.player_sprite)
+
+        self.delta_time = 0
+
         return self.game_loop()
 
     def game_loop(self):
@@ -51,5 +63,17 @@ class SGame(object):
             if event.type == pygame.QUIT:
                 self.game_state = self.GameState.EXIT
 
+            # players controls
+
+            if event.type == pygame.KEYDOWN:
+                self.player_sprite.player_input(event.key, False)
+            if event.type == pygame.KEYUP:
+                self.player_sprite.player_input(event.key, True)
+
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                self.player_sprite.player_input(event.button, False, event.pos)
+
     def mainframe(self):
-        pass
+        self.screen.fill([130, 240, 170])
+        self.player.update()
+        self.player.draw(self.screen)

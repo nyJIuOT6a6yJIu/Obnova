@@ -1,3 +1,5 @@
+import time
+
 import pygame
 import math
 
@@ -16,9 +18,6 @@ class PushButton(pygame.sprite.Sprite):
 
         self.hover_images = []
         self.unhover_images = []
-
-        # self.hover_rect = self.hover_image.get_rect(center=pos)
-        # self.unhover_rect = self.unhover_image.get_rect(center=pos)
 
         self.hover_sound = None
 
@@ -127,16 +126,17 @@ class SralkerButton(PushButton):
         player_rect_hover = self.hover_images[0].get_rect(center=[self.pos[0]+5, self.pos[1]])
         gas_mask_rect_hover = self.hover_images[1].get_rect(center=[self.pos[0]+12, self.pos[1]-9])
         gun_rect_hover = self.hover_images[2].get_rect(center=[self.pos[0]+12, self.pos[1]+20])
-        self.parent.screen.blit(self.hover_images[0], player_rect_hover)
-        self.parent.screen.blit(self.hover_images[1], gas_mask_rect_hover)
-        self.parent.screen.blit(self.hover_images[2], gun_rect_hover)
 
         player_rect_unhover = self.unhover_images[0].get_rect(center=[self.pos[0]+5, self.pos[1]])
         gas_mask_rect_unhover = self.unhover_images[1].get_rect(midtop=[player_rect_unhover.centerx+3,
                                                                         player_rect_unhover.top])
         gun_rect_unhover = self.unhover_images[2].get_rect(center=[self.pos[0]-25, self.pos[1]-20])
+
+        self.parent.screen.blit(self.hover_images[0], player_rect_hover)
         self.parent.screen.blit(self.unhover_images[2], gun_rect_unhover)
         self.parent.screen.blit(self.unhover_images[0], player_rect_unhover)
+        self.parent.screen.blit(self.hover_images[1], gas_mask_rect_hover)
+        self.parent.screen.blit(self.hover_images[2], gun_rect_hover)
         self.parent.screen.blit(self.unhover_images[1], gas_mask_rect_unhover)
 
 
@@ -162,19 +162,20 @@ class RunnerButton(PushButton):
                               ]
 
         self.hover_sound = pygame.mixer.Sound('R_Game/audio/misc sounds/jump.mp3')
-        self.hover_sound.set_volume(1.0)
+        self.hover_sound.set_volume(0.2)
 
-    def draw_central_image(self):  # 370, 125
+    def draw_central_image(self):
         player_rect_hover = self.hover_images[0].get_rect(center=[self.pos[0]+5, self.pos[1]])
         mask_rect_hover = self.hover_images[1].get_rect(midtop=[player_rect_hover.centerx+3,
                                                                 player_rect_hover.top-15])
-        self.parent.screen.blit(self.hover_images[0], player_rect_hover)
-        self.parent.screen.blit(self.hover_images[1], mask_rect_hover)
 
         player_rect_unhover = self.unhover_images[0].get_rect(center=[self.pos[0]+5, self.pos[1]])
         mask_rect_unhover = self.unhover_images[1].get_rect(midtop=[player_rect_unhover.centerx+3,
                                                                         player_rect_unhover.top-15])
+
+        self.parent.screen.blit(self.hover_images[0], player_rect_hover)
         self.parent.screen.blit(self.unhover_images[0], player_rect_unhover)
+        self.parent.screen.blit(self.hover_images[1], mask_rect_hover)
         self.parent.screen.blit(self.unhover_images[1], mask_rect_unhover)
 
 
@@ -210,10 +211,11 @@ class SwitchWindow:
                         if i.hovered:
                             self.return_value = i.return_value
                             pygame.mixer.Sound('R_Game/audio/misc sounds/kill_run_init.mp3').play()
-                            break
+                            # if i.return_value == "launch_runner":
+                            #     time.sleep(1.5)
+                            break  # TODO: do we even need to play that sound?
 
             sky_color = self.bg_color.return_color()
-            # inc = self.delta_time * 25 / 1000
             inc = self.delta_time / 40
 
             self.screen.fill(sky_color)

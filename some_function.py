@@ -16,7 +16,7 @@ def load():
             progress = loads(decrypted)
     except Exception as e:
         print(e)
-        progress = None
+        progress = dict()
     return progress
 
 
