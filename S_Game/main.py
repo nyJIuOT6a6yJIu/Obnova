@@ -41,6 +41,20 @@ class SGame(object):
         self.player_sprite = Player(self)
         self.player.add(self.player_sprite)
 
+        self.obstacles = pygame.sprite.Group()
+        obs = pygame.sprite.Sprite()
+        obs.image = pygame.Surface([12, 12])
+        obs.rect = obs.image.get_rect(center=[50, 50])
+        self.obstacles.add(obs)
+        obs = pygame.sprite.Sprite()
+        obs.image = pygame.Surface([20, 80])
+        obs.rect = obs.image.get_rect(center=[500, 350])
+        self.obstacles.add(obs)
+        obs = pygame.sprite.Sprite()
+        obs.image = pygame.Surface([100, 120])
+        obs.rect = obs.image.get_rect(center=[700, 500])
+        self.obstacles.add(obs)
+
         self.delta_time = 0
 
         return self.game_loop()
@@ -77,3 +91,6 @@ class SGame(object):
         self.screen.fill([130, 240, 170])
         self.player.update()
         self.player.draw(self.screen)
+
+        self.obstacles.update()
+        self.obstacles.draw(self.screen)
