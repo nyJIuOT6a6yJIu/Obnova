@@ -206,6 +206,13 @@ class SwitchWindow:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     return
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_s:
+                        self.return_value = "launch_sralker"
+                        pygame.mixer.Sound('R_Game/audio/misc sounds/kill_run_init.mp3').play()
+                    elif event.key == pygame.K_r:
+                        self.return_value = "launch_runner"
+                        pygame.mixer.Sound('R_Game/audio/misc sounds/kill_run_init.mp3').play()
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                     for i in self.button_group:
                         if i.hovered:

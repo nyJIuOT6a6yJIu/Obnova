@@ -38,7 +38,7 @@ class SGame(object):
         self.player_stand = pygame.image.load('R_Game/graphics/Player/player_stand.png').convert_alpha()
 
         self.player = pygame.sprite.GroupSingle()
-        self.player_sprite = Player(self)
+        self.player_sprite = Player(self, pos=[300, 400])
         self.player.add(self.player_sprite)
 
         self.obstacles = pygame.sprite.Group()

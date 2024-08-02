@@ -4,8 +4,6 @@ from operator import add
 
 import pygame
 
-from R_Game.config.config import STOMP_SPEED
-
 
 class Player(pygame.sprite.Sprite):
     def __init__(self, game, pos=None):
@@ -28,8 +26,8 @@ class Player(pygame.sprite.Sprite):
         self.mirrored = False
 
         self.image = self.anim_frames[self.anim_index]
-        self.rect = self.image.get_rect(midbottom=(80, 300))
         self.center = pos or [0.0, 0.0]
+        self.rect = self.image.get_rect(center=self.center)
 
         self.mask = None
         self.weapon = None
@@ -85,20 +83,15 @@ class Player(pygame.sprite.Sprite):
             return_value[3] = True
         return return_value
 
-    # @staticmethod
-    # def collision_direction(sprite_1, sprite_2):
-    #     rect_1 = [sprite_1.rect.left, sprite_1.rect.left+sprite_1.rect.width,
-    #               sprite_1.rect.top, sprite_1.rect.top + sprite_1.rect.height]
-    #     rect_2 = [sprite_2.rect.left, sprite_2.rect.left+sprite_2.rect.width,
-    #               sprite_2.rect.top, sprite_2.rect.top + sprite_2.rect.height]
-    #     return_value = [False, False, False, False]
-    #     # TODO: collision
-    #
-    # def obstacle_collision(self):
-    #     return_value = [False, False, False, False]
-    #     # for obs in pygame.sprite.spritecollide(self, self.game.obstacles, False):
-    #
-    #     return return_value
+    def is_out_of_bounds_x(self):
+        if self.rect.left < 0 or self.rect.right > 800:
+            return True
+        return False
+
+    def is_out_of_bounds_y(self):
+        if self.rect.top < 0 or self.rect.bottom > 600:
+            return True
+        return False
 
     def _movement(self):
 
@@ -107,25 +100,32 @@ class Player(pygame.sprite.Sprite):
         if abs(self.rect.centery - self.center[1]) > 2:
             self.center[1] = self.rect.centery
 
-        old_center = [i for i in self.center]
-        self.center[0] += self.speed.x * self.game.delta_time / 1000
-        self.rect.center = [int(self.center[0]), int(self.center[1])]
+        dt = self.game.delta_time / 1000
 
-        oob = self.is_out_of_bounds()
+        old_center = [i*1 for i in self.center]
 
-        if True in oob or pygame.sprite.spritecollide(self, self.game.obstacles, False):
-            self.center = old_center
-            self.rect.center = [int(i) for i in self.center]
+        self.center[1] += self.speed.y * dt
+        self.rect.centery = int(self.center[1])
 
-        old_center = [i for i in self.center]
-        self.center[1] += self.speed.y * self.game.delta_time / 1000
-        self.rect.center = [int(self.center[0]), int(self.center[1])]
+        oob_y = self.is_out_of_bounds_y()
 
-        oob = self.is_out_of_bounds()
+        if oob_y or pygame.sprite.spritecollide(self, self.game.obstacles, False):
+            self.center[1] = old_center[1]
+            self.rect.centery = int(old_center[1])
 
-        if True in oob or pygame.sprite.spritecollide(self, self.game.obstacles, False):
-            self.center = old_center
-            self.rect.center = [int(i) for i in self.center]
+        # pixel-wide margin to avoid collision bugs
+        margin = pow(-1, bool(self.speed.x < 0)) * bool(self.speed.x != 0)
+
+        self.center[0] += self.speed.x * dt + margin
+        self.rect.centerx = int(self.center[0])
+
+        oob_x = self.is_out_of_bounds_x()
+
+        if oob_x or pygame.sprite.spritecollide(self, self.game.obstacles, False):
+            self.center[0] = old_center[0] + margin
+
+        self.center[0] -= margin
+        self.rect.centerx = int(self.center[0])
 
         self.speed.x = -375*bool(self.a_pressed) + 375*bool(self.d_pressed)
         self.speed.y = -375*bool(self.w_pressed) + 375*bool(self.s_pressed)
@@ -134,8 +134,6 @@ class Player(pygame.sprite.Sprite):
             self.mirrored = True
         elif self.speed.x > 0:
             self.mirrored = False
-
-        # now = pygame.time.get_ticks()
 
     # def pick_up_weapon(self, weapon, event_pos=None):
     #     if event_pos is not None and self.weapon:

@@ -116,17 +116,16 @@ class Player(pygame.sprite.Sprite):
 
         if self.mask.dash_status == 'active':
             pass
-        elif self.toaded_tick is not None:
-            self.speed[0] = -375 * bool(self.d_pressed) + 375 * bool(self.a_pressed)
-        else:
-            self.speed[0] = -375*bool(self.a_pressed) + 375*bool(self.d_pressed)
-
-        if not self.is_airborne():
+        elif self.game.harder_mode and not self.is_airborne() and not self.d_pressed and not self.a_pressed:
             minus = stiffness*self.game.delta_time / 1000
             if abs(self.speed[0]) > abs(minus):
                 self.speed[0] -= minus*self.speed[0]/abs(self.speed[0])
             else:
                 self.speed[0] = 0
+        elif self.toaded_tick is not None:
+            self.speed[0] = -375 * bool(self.d_pressed) + 375 * bool(self.a_pressed)
+        else:
+            self.speed[0] = -375*bool(self.a_pressed) + 375*bool(self.d_pressed)
 
         now = pygame.time.get_ticks()
         if self.toaded_tick and now - self.toaded_tick > 1500:

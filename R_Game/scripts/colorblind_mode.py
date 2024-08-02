@@ -184,7 +184,6 @@ class CB_Player(Player):
 
     def _movement(self):
         gravity_acc = self.game.gravity_acceleration
-        stiffness = self.game.ground_stiffness
 
         if abs(self.rect.centerx - self.center[0]) > 2:
             self.center[0] = self.rect.centerx
@@ -215,13 +214,6 @@ class CB_Player(Player):
             pass
         else:
             self.speed[0] = -375*bool(self.a_pressed) + 375*bool(self.d_pressed)
-
-        if not self.is_airborne():
-            minus = stiffness*self.game.delta_time / 1000
-            if abs(self.speed[0]) > abs(minus):
-                self.speed[0] -= minus*self.speed[0]/abs(self.speed[0])
-            else:
-                self.speed[0] = 0
 
     def pick_up_weapon(self, weapon, event_pos=None):
         if event_pos is not None and self.weapon:
