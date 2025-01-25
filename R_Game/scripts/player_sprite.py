@@ -85,7 +85,6 @@ class Player(pygame.sprite.Sprite):
         if self.game.game_state in [self.game.GameState.NUKE_START, self.game.GameState.NO_KILL_START]:
             self.speed[0] = 0
         gravity_acc = self.game.gravity_acceleration
-        stiffness = self.game.ground_stiffness
 
         if abs(self.rect.centerx - self.center[0]) > 2:
             self.center[0] = self.rect.centerx
@@ -116,12 +115,8 @@ class Player(pygame.sprite.Sprite):
 
         if self.mask.dash_status == 'active':
             pass
-        elif self.game.harder_mode and not self.is_airborne() and not self.d_pressed and not self.a_pressed:
-            minus = stiffness*self.game.delta_time / 1000
-            if abs(self.speed[0]) > abs(minus):
-                self.speed[0] -= minus*self.speed[0]/abs(self.speed[0])
-            else:
-                self.speed[0] = 0
+        elif self.game.harder_mode and not self.is_airborne() and self.d_pressed == self.a_pressed:
+            self.speed[0] = 0
         elif self.toaded_tick is not None:
             self.speed[0] = -375 * bool(self.d_pressed) + 375 * bool(self.a_pressed)
         else:

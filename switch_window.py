@@ -171,7 +171,7 @@ class RunnerButton(PushButton):
 
         player_rect_unhover = self.unhover_images[0].get_rect(center=[self.pos[0]+5, self.pos[1]])
         mask_rect_unhover = self.unhover_images[1].get_rect(midtop=[player_rect_unhover.centerx+3,
-                                                                        player_rect_unhover.top-15])
+                                                                    player_rect_unhover.top-15])
 
         self.parent.screen.blit(self.hover_images[0], player_rect_hover)
         self.parent.screen.blit(self.unhover_images[0], player_rect_unhover)
@@ -217,10 +217,11 @@ class SwitchWindow:
                     for i in self.button_group:
                         if i.hovered:
                             self.return_value = i.return_value
-                            pygame.mixer.Sound('R_Game/audio/misc sounds/kill_run_init.mp3').play()
+                            #pygame.mixer.Sound('R_Game/audio/misc sounds/kill_run_init.mp3').play()
                             # if i.return_value == "launch_runner":
-                            #     time.sleep(1.5)
+                            #     time.sleep(0.5)
                             break  # TODO: do we even need to play that sound?
+                                   # Should it be separate process? It sounds like fart
 
             sky_color = self.bg_color.return_color()
             inc = self.delta_time / 40

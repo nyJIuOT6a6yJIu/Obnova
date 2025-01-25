@@ -11,7 +11,6 @@ from R_Game.scripts.player_sprite import Player, Weapon, Stomp, Mask
 from R_Game.config.subtitles import SUBTITLES
 from R_Game.config.config import (STOMP_SPEED,
                                   GRAVITY_ACCELERATION,
-                                  GROUND_STIFFNESS,
                                   ENEMY_SPAWN_INTERVAL_MS,
                                   ENEMY_PLACEMENT_RANGE,
                                   FLY_Y_RANGE,
@@ -625,7 +624,6 @@ class Touhou:
         self.game.last_rescale_score = None
 
         self.game.gravity_acceleration = GRAVITY_ACCELERATION
-        self.game.ground_stiffness = GROUND_STIFFNESS
 
         self.game.enemy_spawn_interval = ENEMY_SPAWN_INTERVAL_MS
 

@@ -7,7 +7,6 @@ non_specific_byte_string =  b'-dqvcqdggdMqqH3aoYfRlLboWY5tYAAYlVqUcXrjwU0='
 STOMP_SPEED            : Final = 1500
 
 GRAVITY_ACCELERATION   : Final = 4000
-GROUND_STIFFNESS       : Final = 4000
 
 MAX_AMMO_CAPACITY      : Final = 30
 PICKUP_DROP_RATE       : Final = 20

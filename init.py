@@ -15,7 +15,6 @@ def main():
     pygame.init()
 
     progress = load()
-    # progress['sralker_opened'] = False
 
     pygame.display.set_caption(DISPLAY_CAPTION)
 
@@ -43,6 +42,7 @@ def main():
         show_error_window()
     finally:
         pygame.quit()
+
 
 if __name__ == '__main__':
     main()

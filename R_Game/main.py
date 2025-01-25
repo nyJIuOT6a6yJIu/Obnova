@@ -24,7 +24,6 @@ from R_Game.config.config import (
                                   RUNNER_SCREEN_RESOLUTION,
                                   STOMP_SPEED,
                                   GRAVITY_ACCELERATION,
-                                  GROUND_STIFFNESS,
                                   ENEMY_SPAWN_INTERVAL_MS,
                                   ENEMY_PLACEMENT_RANGE,
                                   FLY_Y_RANGE,
@@ -415,7 +414,6 @@ class HMGame(object):
         self.last_rescale_score = None
 
         self.gravity_acceleration = GRAVITY_ACCELERATION
-        self.ground_stiffness = GROUND_STIFFNESS
 
         self.enemy_spawn_interval = ENEMY_SPAWN_INTERVAL_MS
 
@@ -1297,7 +1295,6 @@ class HMGame(object):
                 _score = min(110 + 27*bool(self.advanced_enemies), int(self.score))
             else:
                 _score = min(137, int(self.score))
-            self.ground_stiffness = GROUND_STIFFNESS * (131 - _score)/137
 
             self.player_sprite.max_jumps = 1 + _score//(30 + 5*self.mask_sprite.stomps)
 
